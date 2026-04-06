@@ -1,0 +1,182 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+enum Role {
+  SUPER_ADMIN
+  CHECKIN_STAFF
+  TRACK_MANAGER
+  MENTOR_JUDGE
+  SUPPORT_STAFF
+  PARTICIPANT
+}
+
+enum TeamInviteStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  REVOKED
+}
+
+enum TeamMembershipStatus {
+  ACTIVE
+  REMOVED
+}
+
+enum RegistrationStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  REJECTED
+  WAITLISTED
+}
+
+enum SubmissionStatus {
+  DRAFT
+  SUBMITTED
+  LOCKED
+}
+
+enum CheckInMethod {
+  QR
+  BADGE_LOOKUP
+}
+
+model User {
+  id             String              @id @default(cuid())
+  email          String              @unique
+  passwordHash   String?
+  fullName       String
+  role           Role                @default(PARTICIPANT)
+  isActive       Boolean             @default(true)
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+  profile        ParticipantProfile?
+  captainedTeams Team[]              @relation("Captain")
+  memberships    TeamMember[]
+  invites        TeamInvite[]
+  checkIns       CheckIn[]
+  auditLogs      AuditLog[]
+}
+
+model ParticipantProfile {
+  id                    String             @id @default(cuid())
+  userId                String             @unique
+  phone                 String?
+  institute             String?
+  graduationYear        Int?
+  city                  String?
+  country               String?
+  emergencyContactName  String?
+  emergencyContactPhone String?
+  registrationStatus    RegistrationStatus @default(DRAFT)
+  consentDataUsage      Boolean            @default(false)
+  consentPhotography    Boolean            @default(false)
+  consentCodeIpPolicy   Boolean            @default(false)
+  createdAt             DateTime           @default(now())
+  updatedAt             DateTime           @updatedAt
+  user                  User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Team {
+  id          String       @id @default(cuid())
+  name        String       @unique
+  captainId   String
+  trackId     String?
+  isLocked    Boolean      @default(false)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  captain     User         @relation("Captain", fields: [captainId], references: [id], onDelete: Restrict)
+  track       Track?       @relation(fields: [trackId], references: [id], onDelete: SetNull)
+  members     TeamMember[]
+  invites     TeamInvite[]
+  submissions Submission[]
+}
+
+model TeamMember {
+  id       String               @id @default(cuid())
+  teamId   String
+  userId   String
+  status   TeamMembershipStatus @default(ACTIVE)
+  joinedAt DateTime             @default(now())
+  team     Team                 @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user     User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, userId])
+}
+
+model TeamInvite {
+  id          String           @id @default(cuid())
+  teamId      String
+  userId      String
+  status      TeamInviteStatus @default(PENDING)
+  invitedById String
+  createdAt   DateTime         @default(now())
+  respondedAt DateTime?
+  team        Team             @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, userId])
+}
+
+model Track {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  name        String
+  description String
+  capacity    Int
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  teams       Team[]
+}
+
+model Submission {
+  id           String           @id @default(cuid())
+  teamId       String
+  title        String
+  summary      String
+  repoUrl      String?
+  demoUrl      String?
+  slideDeckUrl String?
+  status       SubmissionStatus @default(DRAFT)
+  submittedAt  DateTime?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+  team         Team             @relation(fields: [teamId], references: [id], onDelete: Cascade)
+}
+
+model CheckIn {
+  id          String        @id @default(cuid())
+  userId      String
+  checkedInAt DateTime      @default(now())
+  method      CheckInMethod
+  notes       String?
+  scannedById String
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([checkedInAt])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorId    String
+  action     String
+  entityType String
+  entityId   String
+  payload    String?
+  createdAt  DateTime @default(now())
+  actor      User     @relation(fields: [actorId], references: [id], onDelete: Cascade)
+
+  @@index([entityType, entityId])
+  @@index([createdAt])
+}
