@@ -1,8 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -12,172 +7,140 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum Role {
-  SUPER_ADMIN
-  CHECKIN_STAFF
-  TRACK_MANAGER
-  MENTOR_JUDGE
-  SUPPORT_STAFF
+enum UserRole {
   PARTICIPANT
+  ORGANIZER
+  ADMIN
 }
 
-enum TeamInviteStatus {
+enum OrganizerRequestedRole {
+  CORE_ORGANIZER
+  TECHNICAL_LEAD
+  LOGISTICS
+  VOLUNTEER
+  PR_MARKETING
+}
+
+enum OrganizerApprovedRole {
+  CORE_ORGANIZER
+  TECHNICAL_LEAD
+  LOGISTICS
+  VOLUNTEER
+  PR_MARKETING
+}
+
+enum ApprovalStatus {
   PENDING
-  ACCEPTED
-  DECLINED
-  REVOKED
-}
-
-enum TeamMembershipStatus {
-  ACTIVE
-  REMOVED
-}
-
-enum RegistrationStatus {
-  DRAFT
-  SUBMITTED
   APPROVED
   REJECTED
-  WAITLISTED
 }
 
-enum SubmissionStatus {
+enum TeamMemberStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum TeamStatus {
   DRAFT
   SUBMITTED
-  LOCKED
-}
-
-enum CheckInMethod {
-  QR
-  BADGE_LOOKUP
 }
 
 model User {
-  id             String              @id @default(cuid())
-  email          String              @unique
-  passwordHash   String?
-  fullName       String
-  role           Role                @default(PARTICIPANT)
-  isActive       Boolean             @default(true)
-  createdAt      DateTime            @default(now())
-  updatedAt      DateTime            @updatedAt
-  profile        ParticipantProfile?
-  captainedTeams Team[]              @relation("Captain")
-  memberships    TeamMember[]
-  invites        TeamInvite[]
-  checkIns       CheckIn[]
-  auditLogs      AuditLog[]
+  id               String             @id @default(cuid())
+  email            String             @unique
+  fullName         String
+  phone            String?
+  passwordHash     String
+  role             UserRole           @default(PARTICIPANT)
+  createdAt        DateTime           @default(now())
+  participant      ParticipantProfile?
+  organizerProfile OrganizerProfile?
+  leadTeams        Team[]             @relation("TeamLeader")
+  memberships      TeamMember[]
+  createdTracks    Track[]            @relation("TrackCreator")
+  checkinsDone     Checkin[]          @relation("CheckinActor")
+  approvedOrgs     OrganizerProfile[] @relation("OrgApprover")
 }
 
 model ParticipantProfile {
-  id                    String             @id @default(cuid())
-  userId                String             @unique
-  phone                 String?
-  institute             String?
-  graduationYear        Int?
-  city                  String?
-  country               String?
-  emergencyContactName  String?
-  emergencyContactPhone String?
-  registrationStatus    RegistrationStatus @default(DRAFT)
-  consentDataUsage      Boolean            @default(false)
-  consentPhotography    Boolean            @default(false)
-  consentCodeIpPolicy   Boolean            @default(false)
-  createdAt             DateTime           @default(now())
-  updatedAt             DateTime           @updatedAt
-  user                  User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id             String   @id @default(cuid())
+  userId         String   @unique
+  registerNumber String   @unique
+  graduationYear Int
+  college        String
+  department     String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
-model Team {
-  id          String       @id @default(cuid())
-  name        String       @unique
-  captainId   String
-  trackId     String?
-  isLocked    Boolean      @default(false)
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
-  captain     User         @relation("Captain", fields: [captainId], references: [id], onDelete: Restrict)
-  track       Track?       @relation(fields: [trackId], references: [id], onDelete: SetNull)
-  members     TeamMember[]
-  invites     TeamInvite[]
-  submissions Submission[]
-}
-
-model TeamMember {
-  id       String               @id @default(cuid())
-  teamId   String
-  userId   String
-  status   TeamMembershipStatus @default(ACTIVE)
-  joinedAt DateTime             @default(now())
-  team     Team                 @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  user     User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([teamId, userId])
-}
-
-model TeamInvite {
-  id          String           @id @default(cuid())
-  teamId      String
-  userId      String
-  status      TeamInviteStatus @default(PENDING)
-  invitedById String
-  createdAt   DateTime         @default(now())
-  respondedAt DateTime?
-  team        Team             @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([teamId, userId])
+model OrganizerProfile {
+  id             String                 @id @default(cuid())
+  userId         String                 @unique
+  requestedRole  OrganizerRequestedRole
+  approvedRole   OrganizerApprovedRole?
+  status         ApprovalStatus         @default(PENDING)
+  rejectionReason String?
+  reasonForJoining String
+  approvedBy     String?
+  approvedAt     DateTime?
+  createdAt      DateTime               @default(now())
+  user           User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  approver       User?                  @relation("OrgApprover", fields: [approvedBy], references: [id], onDelete: SetNull)
 }
 
 model Track {
   id          String   @id @default(cuid())
-  code        String   @unique
   name        String
   description String
-  capacity    Int
   isActive    Boolean  @default(true)
+  createdBy   String
   createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  creator     User     @relation("TrackCreator", fields: [createdBy], references: [id], onDelete: Restrict)
   teams       Team[]
 }
 
-model Submission {
-  id           String           @id @default(cuid())
+model Team {
+  id                 String     @id @default(cuid())
+  name               String
+  code               String     @unique
+  leaderId           String
+  trackId            String?
+  projectName        String?
+  projectDescription String?
+  techStack          String?
+  githubLink         String?
+  demoLink           String?
+  status             TeamStatus @default(DRAFT)
+  qrToken            String?    @unique
+  qrCodeUrl          String?
+  submittedAt        DateTime?
+  createdAt          DateTime   @default(now())
+  leader             User       @relation("TeamLeader", fields: [leaderId], references: [id], onDelete: Restrict)
+  track              Track?     @relation(fields: [trackId], references: [id], onDelete: SetNull)
+  members            TeamMember[]
+  checkins           Checkin[]
+
+  @@unique([name, leaderId])
+}
+
+model TeamMember {
+  id          String           @id @default(cuid())
   teamId       String
-  title        String
-  summary      String
-  repoUrl      String?
-  demoUrl      String?
-  slideDeckUrl String?
-  status       SubmissionStatus @default(DRAFT)
-  submittedAt  DateTime?
-  createdAt    DateTime         @default(now())
-  updatedAt    DateTime         @updatedAt
+  userId       String
+  status       TeamMemberStatus @default(PENDING)
+  requestedAt  DateTime         @default(now())
+  respondedAt  DateTime?
   team         Team             @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user         User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, userId])
 }
 
-model CheckIn {
-  id          String        @id @default(cuid())
-  userId      String
-  checkedInAt DateTime      @default(now())
-  method      CheckInMethod
-  notes       String?
-  scannedById String
-  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([checkedInAt])
-}
-
-model AuditLog {
-  id         String   @id @default(cuid())
-  actorId    String
-  action     String
-  entityType String
-  entityId   String
-  payload    String?
-  createdAt  DateTime @default(now())
-  actor      User     @relation(fields: [actorId], references: [id], onDelete: Cascade)
-
-  @@index([entityType, entityId])
-  @@index([createdAt])
+model Checkin {
+  id          String   @id @default(cuid())
+  teamId      String
+  checkedInBy String
+  checkedInAt DateTime @default(now())
+  team        Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  actor       User     @relation("CheckinActor", fields: [checkedInBy], references: [id], onDelete: Restrict)
 }

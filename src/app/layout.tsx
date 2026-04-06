@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import { AppHeader } from "@/components/app-header";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -15,7 +14,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "SIGKDD Hackathon Portal",
-  description: "Registration, team management, tracks, and check-in operations.",
+  description: "Participant and organizer portal for SIGKDD hackathon.",
 };
 
 export default function RootLayout({
@@ -28,10 +27,7 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">
-        <AppHeader />
-        <main className="mx-auto w-full max-w-6xl flex-1 px-6 py-8">{children}</main>
-      </body>
+      <body className="min-h-full">{children}</body>
     </html>
   );
 }

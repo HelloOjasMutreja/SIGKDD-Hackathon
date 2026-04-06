@@ -1,103 +1,128 @@
-import { revalidatePath } from "next/cache";
-import { RegistrationStatus } from "@prisma/client";
+import { redirect } from "next/navigation";
+import { TeamMemberStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { getCurrentUserOrRedirect } from "@/lib/current-user";
+import { setParticipantSession } from "@/lib/auth";
+import { hashPassword } from "@/lib/security";
 
-async function saveRegistration(formData: FormData) {
+const REGISTER_REGEX = /^RA\d{13}$/;
+const ALLOWED_YEARS = [2027, 2028, 2029] as const;
+
+type SearchProps = {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+};
+
+async function registerParticipant(formData: FormData) {
   "use server";
 
-  const user = await getCurrentUserOrRedirect();
+  const fullName = String(formData.get("fullName") ?? "").trim();
+  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  const password = String(formData.get("password") ?? "");
+  const confirmPassword = String(formData.get("confirmPassword") ?? "");
+  const registerNumber = String(formData.get("registerNumber") ?? "").trim().toUpperCase();
+  const phone = String(formData.get("phone") ?? "").trim();
+  const graduationYear = Number(String(formData.get("graduationYear") ?? ""));
+  const college = String(formData.get("college") ?? "").trim();
+  const department = String(formData.get("department") ?? "").trim();
+  const inviteCode = String(formData.get("invite") ?? "").trim().toUpperCase();
 
-  if (user.role !== "PARTICIPANT") {
-    return;
+  if (!fullName || !email || !password || !registerNumber || !phone || !college || !department) {
+    redirect("/register?error=missing");
   }
 
-  const graduationYearValue = String(formData.get("graduationYear") ?? "").trim();
-  const graduationYear = graduationYearValue ? Number(graduationYearValue) : null;
+  if (password !== confirmPassword) {
+    redirect("/register?error=password_mismatch");
+  }
 
-  await prisma.participantProfile.upsert({
-    where: { userId: user.id },
-    update: {
-      phone: String(formData.get("phone") ?? "").trim() || null,
-      institute: String(formData.get("institute") ?? "").trim() || null,
-      graduationYear: graduationYear,
-      city: String(formData.get("city") ?? "").trim() || null,
-      country: String(formData.get("country") ?? "").trim() || null,
-      emergencyContactName: String(formData.get("emergencyContactName") ?? "").trim() || null,
-      emergencyContactPhone: String(formData.get("emergencyContactPhone") ?? "").trim() || null,
-      consentDataUsage: formData.get("consentDataUsage") === "on",
-      consentPhotography: formData.get("consentPhotography") === "on",
-      consentCodeIpPolicy: formData.get("consentCodeIpPolicy") === "on",
-      registrationStatus: RegistrationStatus.SUBMITTED,
-    },
-    create: {
-      userId: user.id,
-      phone: String(formData.get("phone") ?? "").trim() || null,
-      institute: String(formData.get("institute") ?? "").trim() || null,
-      graduationYear: graduationYear,
-      city: String(formData.get("city") ?? "").trim() || null,
-      country: String(formData.get("country") ?? "").trim() || null,
-      emergencyContactName: String(formData.get("emergencyContactName") ?? "").trim() || null,
-      emergencyContactPhone: String(formData.get("emergencyContactPhone") ?? "").trim() || null,
-      consentDataUsage: formData.get("consentDataUsage") === "on",
-      consentPhotography: formData.get("consentPhotography") === "on",
-      consentCodeIpPolicy: formData.get("consentCodeIpPolicy") === "on",
-      registrationStatus: RegistrationStatus.SUBMITTED,
+  if (!REGISTER_REGEX.test(registerNumber)) {
+    redirect("/register?error=register_number");
+  }
+
+  if (!ALLOWED_YEARS.includes(graduationYear as (typeof ALLOWED_YEARS)[number])) {
+    redirect("/register?error=graduation_year");
+  }
+
+  const exists = await prisma.user.findUnique({ where: { email } });
+  if (exists) {
+    redirect("/register?error=email_exists");
+  }
+
+  const user = await prisma.user.create({
+    data: {
+      email,
+      fullName,
+      phone,
+      role: "PARTICIPANT",
+      passwordHash: hashPassword(password),
+      participant: {
+        create: {
+          registerNumber,
+          graduationYear,
+          college,
+          department,
+        },
+      },
     },
   });
 
-  revalidatePath("/register");
-  revalidatePath("/admin");
-}
+  await setParticipantSession({ userId: user.id, role: user.role });
 
-export default async function RegisterPage() {
-  const user = await getCurrentUserOrRedirect();
-
-  if (user.role !== "PARTICIPANT") {
-    return (
-      <section className="card p-6">
-        <h1 className="text-2xl font-bold">Participant Registration</h1>
-        <p className="mt-2 text-sm text-muted">This page is only for participant accounts. Switch role from the home page.</p>
-      </section>
-    );
+  if (inviteCode) {
+    const invitedTeam = await prisma.team.findUnique({ where: { code: inviteCode } });
+    if (invitedTeam) {
+      await prisma.teamMember.upsert({
+        where: {
+          teamId_userId: {
+            teamId: invitedTeam.id,
+            userId: user.id,
+          },
+        },
+        update: { status: TeamMemberStatus.PENDING },
+        create: {
+          teamId: invitedTeam.id,
+          userId: user.id,
+          status: TeamMemberStatus.PENDING,
+        },
+      });
+      redirect(`/team-setup/pending?teamId=${invitedTeam.id}&invite=1`);
+    }
   }
 
-  const profile = await prisma.participantProfile.findUnique({ where: { userId: user.id } });
+  redirect("/team-setup");
+}
+
+export default async function RegisterPage({ searchParams }: SearchProps) {
+  const params = await searchParams;
+  const error = String(params.error ?? "");
+  const invite = String(params.invite ?? "").toUpperCase();
 
   return (
-    <section className="space-y-6">
-      <div className="card p-6">
-        <h1 className="text-2xl font-bold">Participant Registration</h1>
-        <p className="mt-2 text-sm text-muted">Complete this form to submit your registration profile.</p>
-        <p className="mt-2 text-sm">Current status: <span className="pill">{profile?.registrationStatus ?? "DRAFT"}</span></p>
-      </div>
+    <div className="min-h-screen bg-background">
+      <main className="mx-auto max-w-3xl px-6 py-10">
+        <section className="card p-6">
+          <h1 className="text-2xl font-bold">Participant Registration</h1>
+          <p className="mt-1 text-sm text-muted">Create your participant account and continue to team setup.</p>
+          {error && <p className="mt-3 rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-800">Error: {error.replaceAll("_", " ")}</p>}
 
-      <form action={saveRegistration} className="card grid gap-4 p-6 md:grid-cols-2">
-        <input name="phone" placeholder="Phone" defaultValue={profile?.phone ?? ""} className="rounded-xl border border-border bg-surface-2 px-3 py-2 text-sm" />
-        <input name="institute" placeholder="Institute" defaultValue={profile?.institute ?? ""} className="rounded-xl border border-border bg-surface-2 px-3 py-2 text-sm" />
-        <input name="graduationYear" type="number" placeholder="Graduation year" defaultValue={profile?.graduationYear ?? ""} className="rounded-xl border border-border bg-surface-2 px-3 py-2 text-sm" />
-        <input name="city" placeholder="City" defaultValue={profile?.city ?? ""} className="rounded-xl border border-border bg-surface-2 px-3 py-2 text-sm" />
-        <input name="country" placeholder="Country" defaultValue={profile?.country ?? ""} className="rounded-xl border border-border bg-surface-2 px-3 py-2 text-sm" />
-        <input name="emergencyContactName" placeholder="Emergency contact name" defaultValue={profile?.emergencyContactName ?? ""} className="rounded-xl border border-border bg-surface-2 px-3 py-2 text-sm" />
-        <input name="emergencyContactPhone" placeholder="Emergency contact phone" defaultValue={profile?.emergencyContactPhone ?? ""} className="rounded-xl border border-border bg-surface-2 px-3 py-2 text-sm" />
-
-        <label className="flex items-center gap-2 text-sm md:col-span-2">
-          <input type="checkbox" name="consentDataUsage" defaultChecked={profile?.consentDataUsage ?? false} />
-          I consent to data usage for event operations.
-        </label>
-        <label className="flex items-center gap-2 text-sm md:col-span-2">
-          <input type="checkbox" name="consentPhotography" defaultChecked={profile?.consentPhotography ?? false} />
-          I consent to photography/video at the event.
-        </label>
-        <label className="flex items-center gap-2 text-sm md:col-span-2">
-          <input type="checkbox" name="consentCodeIpPolicy" defaultChecked={profile?.consentCodeIpPolicy ?? false} />
-          I agree to hackathon code and IP policy.
-        </label>
-
-        <button className="rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-white md:col-span-2">
-          Save and submit registration
-        </button>
-      </form>
-    </section>
+          <form action={registerParticipant} className="mt-5 grid gap-3 md:grid-cols-2">
+            <input name="fullName" required placeholder="Full Name" className="rounded-xl border border-border bg-surface-2 px-3 py-2 text-sm" />
+            <input name="email" type="email" required placeholder="Email" className="rounded-xl border border-border bg-surface-2 px-3 py-2 text-sm" />
+            <input name="password" type="password" required placeholder="Password" className="rounded-xl border border-border bg-surface-2 px-3 py-2 text-sm" />
+            <input name="confirmPassword" type="password" required placeholder="Confirm Password" className="rounded-xl border border-border bg-surface-2 px-3 py-2 text-sm" />
+            <input name="registerNumber" required placeholder="Register Number (RA + 13 digits)" className="rounded-xl border border-border bg-surface-2 px-3 py-2 text-sm" />
+            <input name="phone" required placeholder="Phone Number" className="rounded-xl border border-border bg-surface-2 px-3 py-2 text-sm" />
+            <select name="graduationYear" required className="rounded-xl border border-border bg-surface-2 px-3 py-2 text-sm">
+              <option value="">Graduation Year</option>
+              <option value="2027">2027</option>
+              <option value="2028">2028</option>
+              <option value="2029">2029</option>
+            </select>
+            <input name="college" required placeholder="College / Institution" className="rounded-xl border border-border bg-surface-2 px-3 py-2 text-sm" />
+            <input name="department" required placeholder="Department / Branch" className="rounded-xl border border-border bg-surface-2 px-3 py-2 text-sm md:col-span-2" />
+            <input type="hidden" name="invite" value={invite} />
+            <button className="rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-white md:col-span-2">Register and continue</button>
+          </form>
+        </section>
+      </main>
+    </div>
   );
 }
