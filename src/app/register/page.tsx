@@ -101,6 +101,11 @@ export default async function RegisterPage({ searchParams }: SearchProps) {
         <section className="card p-6">
           <h1 className="text-2xl font-bold">Participant Registration</h1>
           <p className="mt-1 text-sm text-muted">Create your participant account and continue to team setup.</p>
+          {invite && (
+            <p className="mt-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+              Invite detected for team code {invite}. Your join request will be auto-created after registration.
+            </p>
+          )}
           {error && <p className="mt-3 rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-800">Error: {error.replaceAll("_", " ")}</p>}
 
           <form action={registerParticipant} className="mt-5 grid gap-3 md:grid-cols-2">
