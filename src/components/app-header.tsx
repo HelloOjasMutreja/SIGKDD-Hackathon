@@ -1,7 +1,10 @@
 import Link from "next/link";
 import { mainNav } from "@/lib/portal-data";
+import { getSessionUser } from "@/lib/session";
 
-export function AppHeader() {
+export async function AppHeader() {
+  const session = await getSessionUser();
+
   return (
     <header className="border-b border-border/70 bg-surface/90 backdrop-blur">
       <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-4">
@@ -26,6 +29,11 @@ export function AppHeader() {
             </Link>
           ))}
         </nav>
+
+        <div className="text-right">
+          <p className="text-xs text-muted">Active session</p>
+          <p className="text-sm font-semibold">{session ? `${session.fullName} (${session.role})` : "Not signed in"}</p>
+        </div>
       </div>
     </header>
   );

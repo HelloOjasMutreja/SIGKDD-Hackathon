@@ -1,6 +1,6 @@
 # SIGKDD Hackathon Registration Portal
 
-Initial implementation scaffold for a full registration and event operations portal.
+Working MVP for a full registration and event operations portal.
 
 ## Stack
 
@@ -17,16 +17,15 @@ Initial implementation scaffold for a full registration and event operations por
 - Local infra template: docker-compose.yml
 - Environment template: .env.example
 
-## Implemented in this first slice
+## Implemented and connected
 
-- Route scaffold for:
-	- Registration
-	- Team management
-	- Track management
-	- Check-in
-	- Organizer admin
+- Email-based portal access session on home page
+- Participant registration persistence and status tracking
+- Team create/invite/accept-decline workflows
+- Track creation and team track assignment with capacity guard
+- Check-in operations with role guard and duplicate prevention
+- Organizer admin workspace for role assignments and registration approvals
 - Core Prisma schema for users, participant profiles, teams, invites, tracks, submissions, check-ins, and audit logs
-- Role and permission utility skeleton
 - Health endpoint: /api/health
 
 ## Local setup
@@ -64,6 +63,15 @@ npm run lint
 npm run db:studio
 ```
 
+## How to use the app end-to-end
+
+1. Open `/` and create a session using your name, email, and role.
+2. Use `PARTICIPANT` role to complete `/register`.
+3. Create team and invites in `/teams`.
+4. Select or manage tracks in `/tracks`.
+5. Switch to `SUPER_ADMIN` or `CHECKIN_STAFF` on `/` for `/check-in`.
+6. Use `/admin` for approvals and role assignments.
+
 ## Local infrastructure (optional but recommended)
 
 Start local supporting services:
@@ -80,8 +88,8 @@ Services included:
 
 ## Next implementation goals
 
-1. Add authentication and session management
-2. Enforce RBAC in server actions and API routes
-3. Replace mock dashboard values with live Prisma queries
-4. Implement registration wizard persistence
-5. Build QR generation and scanner flow for check-in
+1. Replace email-based session with secure password or OAuth auth
+2. Add submission and judging workflow end-to-end
+3. Add QR token generation and scanner camera integration
+4. Add queue-driven notifications and reminders
+5. Add Playwright end-to-end test coverage
