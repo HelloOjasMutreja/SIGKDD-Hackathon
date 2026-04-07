@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ApprovalStatus } from "@prisma/client";
+import { ApprovalStatus, UserRole } from "@/lib/domain";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { setOrganizerSession } from "@/lib/auth";
@@ -20,7 +20,12 @@ async function organizerLogin(formData: FormData) {
     include: { organizerProfile: true },
   });
 
-  if (!user || !user.organizerProfile || (user.role !== "ORGANIZER" && user.role !== "ADMIN") || user.passwordHash !== hashPassword(password)) {
+  if (
+    !user ||
+    !user.organizerProfile ||
+    (user.role !== UserRole.ORGANIZER && user.role !== UserRole.ADMIN) ||
+    user.passwordHash !== hashPassword(password)
+  ) {
     redirect("/org/login?error=invalid_credentials");
   }
 

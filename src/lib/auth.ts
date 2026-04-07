@@ -1,5 +1,5 @@
 import { cookies } from "next/headers";
-import { ApprovalStatus, OrganizerApprovedRole, UserRole } from "@prisma/client";
+import { ApprovalStatus, OrganizerApprovedRole, UserRole } from "@/lib/domain";
 
 const PARTICIPANT_COOKIE = "participant_session";
 const ORGANIZER_COOKIE = "organizer_session";

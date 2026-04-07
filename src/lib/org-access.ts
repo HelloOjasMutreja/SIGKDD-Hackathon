@@ -1,4 +1,4 @@
-import { OrganizerApprovedRole, UserRole } from "@prisma/client";
+import { OrganizerApprovedRole, UserRole } from "@/lib/domain";
 
 export function hasOrgRole(
   userRole: UserRole,

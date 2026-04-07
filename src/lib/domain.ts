@@ -1,0 +1,38 @@
+export enum UserRole {
+  PARTICIPANT = "PARTICIPANT",
+  ORGANIZER = "ORGANIZER",
+  ADMIN = "ADMIN",
+}
+
+export enum OrganizerRequestedRole {
+  CORE_ORGANIZER = "CORE_ORGANIZER",
+  TECHNICAL_LEAD = "TECHNICAL_LEAD",
+  LOGISTICS = "LOGISTICS",
+  VOLUNTEER = "VOLUNTEER",
+  PR_MARKETING = "PR_MARKETING",
+}
+
+export enum OrganizerApprovedRole {
+  CORE_ORGANIZER = "CORE_ORGANIZER",
+  TECHNICAL_LEAD = "TECHNICAL_LEAD",
+  LOGISTICS = "LOGISTICS",
+  VOLUNTEER = "VOLUNTEER",
+  PR_MARKETING = "PR_MARKETING",
+}
+
+export enum ApprovalStatus {
+  PENDING = "PENDING",
+  APPROVED = "APPROVED",
+  REJECTED = "REJECTED",
+}
+
+export enum TeamMemberStatus {
+  PENDING = "PENDING",
+  APPROVED = "APPROVED",
+  REJECTED = "REJECTED",
+}
+
+export enum TeamStatus {
+  DRAFT = "DRAFT",
+  SUBMITTED = "SUBMITTED",
+}

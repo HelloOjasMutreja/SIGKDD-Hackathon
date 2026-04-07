@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { OrganizerApprovedRole } from "@prisma/client";
+import { OrganizerApprovedRole, UserRole } from "@/lib/domain";
 import { OrganizerShell } from "@/components/organizer-shell";
 import { requireApprovedOrganizer } from "@/lib/guards";
 import { hasOrgRole } from "@/lib/org-access";
@@ -10,7 +10,7 @@ async function markCheckin(formData: FormData) {
   const user = await requireApprovedOrganizer();
   const approvedRole = user.organizerProfile?.approvedRole ?? null;
 
-  const allowed = hasOrgRole(user.role, approvedRole, ["ADMIN", OrganizerApprovedRole.LOGISTICS, OrganizerApprovedRole.VOLUNTEER]);
+  const allowed = hasOrgRole(user.role, approvedRole, [UserRole.ADMIN, OrganizerApprovedRole.LOGISTICS, OrganizerApprovedRole.VOLUNTEER]);
   if (!allowed) {
     return;
   }
@@ -48,7 +48,7 @@ export default async function OrgCheckinPage({ searchParams }: SearchProps) {
   const user = await requireApprovedOrganizer();
   const approvedRole = user.organizerProfile?.approvedRole ?? null;
 
-  const allowed = hasOrgRole(user.role, approvedRole, ["ADMIN", OrganizerApprovedRole.LOGISTICS, OrganizerApprovedRole.VOLUNTEER]);
+  const allowed = hasOrgRole(user.role, approvedRole, [UserRole.ADMIN, OrganizerApprovedRole.LOGISTICS, OrganizerApprovedRole.VOLUNTEER]);
   if (!allowed) {
     return (
       <OrganizerShell>

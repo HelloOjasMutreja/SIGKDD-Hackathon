@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { TeamMemberStatus } from "@prisma/client";
+import { TeamMemberStatus } from "@/lib/domain";
 import { prisma } from "@/lib/prisma";
 import { getParticipantTeamState, requireParticipant } from "@/lib/guards";
 

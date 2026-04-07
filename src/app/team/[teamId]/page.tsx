@@ -2,7 +2,7 @@ import Link from "next/link";
 import QRCode from "qrcode";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { TeamMemberStatus, TeamStatus } from "@prisma/client";
+import { TeamMemberStatus, TeamStatus } from "@/lib/domain";
 import { ParticipantShell } from "@/components/participant-shell";
 import { prisma } from "@/lib/prisma";
 import { requireParticipant } from "@/lib/guards";
@@ -166,8 +166,8 @@ export default async function TeamDashboardPage({ params, searchParams }: PagePr
 
   const tracks = await prisma.track.findMany({ where: { isActive: true }, orderBy: { createdAt: "desc" } });
 
-  const approvedMembers = team.members.filter((m) => m.status === TeamMemberStatus.APPROVED);
-  const pendingMembers = team.members.filter((m) => m.status === TeamMemberStatus.PENDING);
+  const approvedMembers = team.members.filter((m: any) => m.status === TeamMemberStatus.APPROVED);
+  const pendingMembers = team.members.filter((m: any) => m.status === TeamMemberStatus.PENDING);
   const isLeader = team.leaderId === user.id;
   const isSubmitted = team.status === TeamStatus.SUBMITTED;
 
@@ -195,7 +195,7 @@ export default async function TeamDashboardPage({ params, searchParams }: PagePr
           <p className="mt-2 text-sm">Team Code: <span className="pill">{team.code}</span></p>
           <p className="mt-1 text-sm text-muted">Invite Link: <a className="text-accent" href={inviteLink}>{inviteLink}</a></p>
           <ul className="mt-3 grid gap-2">
-            {approvedMembers.map((member) => (
+            {approvedMembers.map((member: any) => (
               <li key={member.id} className="rounded-lg border border-border bg-surface-2 p-3 text-sm">
                 {member.user.fullName} ({member.user.participant?.registerNumber ?? "N/A"}) {member.userId === team.leaderId ? "- Leader" : ""}
                 {isLeader && member.userId !== team.leaderId && !isSubmitted && (
@@ -213,7 +213,7 @@ export default async function TeamDashboardPage({ params, searchParams }: PagePr
             <div className="mt-4">
               <h3 className="text-sm font-semibold">Pending Requests</h3>
               <div className="mt-2 grid gap-2">
-                {pendingMembers.map((pending) => (
+                {pendingMembers.map((pending: any) => (
                   <div key={pending.id} className="rounded-lg border border-border bg-surface-2 p-3 text-sm">
                     {pending.user.fullName}
                     <form action={decideJoinRequest} className="mt-2 flex gap-2">
@@ -239,7 +239,7 @@ export default async function TeamDashboardPage({ params, searchParams }: PagePr
             className="rounded-xl border border-border bg-surface-2 px-3 py-2 text-sm md:col-span-2"
           >
             <option value="">Select track</option>
-            {tracks.map((track) => (
+            {tracks.map((track: any) => (
               <option key={track.id} value={track.id}>{track.name}</option>
             ))}
           </select>

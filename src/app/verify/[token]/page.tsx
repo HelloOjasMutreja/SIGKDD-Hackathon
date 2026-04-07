@@ -44,7 +44,7 @@ export default async function VerifyTeamPage({ params }: PageProps) {
         </div>
         <h2 className="mt-5 text-lg font-semibold">Members</h2>
         <ul className="mt-2 grid gap-2">
-          {team.members.map((m) => (
+          {team.members.map((m: any) => (
             <li key={m.id} className="rounded-lg border border-border bg-surface-2 px-3 py-2 text-sm">
               {m.user.fullName} - {m.user.participant?.registerNumber ?? "N/A"}
             </li>

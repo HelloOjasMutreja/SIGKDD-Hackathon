@@ -1,95 +1,90 @@
-# SIGKDD Hackathon Registration Portal
+# SIGKDD Hackathon Portal
 
-Working MVP for a full registration and event operations portal.
+This project now runs on a clean split stack:
+- Frontend: Next.js (existing UI)
+- Backend: Django + SQLite (built-in Django storage and ORM)
 
-## Stack
+Prisma, Docker, and related infra scaffolding were removed from runtime flow.
 
-- Next.js 16 (App Router, TypeScript)
-- Tailwind CSS 4
-- Prisma ORM 7
-- SQLite local bootstrap + PostgreSQL production target
-- Redis (queue/cache), S3-compatible object storage, Resend email
+## Project Structure
 
-## Architecture and stack decisions
+- `src/` - Next.js participant + organizer frontend
+- `backend/` - Django backend API and data models
 
-- Architecture blueprint: docs/architecture.md
-- Finalized stack: docs/tech-stack.md
-- Local infra template: docker-compose.yml
-- Environment template: .env.example
+## Backend (Django)
 
-## Implemented and connected
+### Setup
 
-- Email-based portal access session on home page
-- Participant registration persistence and status tracking
-- Team create/invite/accept-decline workflows
-- Track creation and team track assignment with capacity guard
-- Check-in operations with role guard and duplicate prevention
-- Organizer admin workspace for role assignments and registration approvals
-- Core Prisma schema for users, participant profiles, teams, invites, tracks, submissions, check-ins, and audit logs
-- Health endpoint: /api/health
+```bash
+cd backend
+python -m venv .venv
+.venv\Scripts\activate
+pip install -r requirements.txt
+python manage.py migrate
+python manage.py runserver
+```
 
-## Local setup
+Backend base URL (default): `http://127.0.0.1:8000`
 
-1. Install dependencies
+### API Endpoints
+
+- `GET /api/health`
+- `POST /api/query`
+
+The frontend uses `POST /api/query` as a typed model-action bridge (Prisma-like call shape, Django execution).
+
+## Frontend (Next.js)
+
+### Setup
 
 ```bash
 npm install
-```
-
-2. Generate Prisma client
-
-```bash
-npm run prisma:generate
-```
-
-3. Apply migrations
-
-```bash
-npm run prisma:migrate -- --name init
-```
-
-4. Run the app
-
-```bash
 npm run dev
 ```
 
-5. Open http://localhost:3000
+Frontend base URL (default): `http://localhost:3000`
 
-## Useful commands
+## Environment
 
-```bash
-npm run lint
-npm run db:studio
+Copy `.env.example` to `.env` and ensure:
+
+```env
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+DJANGO_API_URL=http://127.0.0.1:8000
 ```
 
-## How to use the app end-to-end
+## Implemented Portals and Routes
 
-1. Open `/` and create a session using your name, email, and role.
-2. Use `PARTICIPANT` role to complete `/register`.
-3. Create team and invites in `/teams`.
-4. Select or manage tracks in `/tracks`.
-5. Switch to `SUPER_ADMIN` or `CHECKIN_STAFF` on `/` for `/check-in`.
-6. Use `/admin` for approvals and role assignments.
+Participant:
+- `/`
+- `/register`
+- `/login`
+- `/team-setup`
+- `/team-setup/create`
+- `/team-setup/join`
+- `/team-setup/pending`
+- `/team/[teamId]`
+- `/dashboard`
+- `/profile`
+- `/logout`
 
-## Local infrastructure (optional but recommended)
+Organizer:
+- `/org/login`
+- `/org/register`
+- `/org/pending`
+- `/org/dashboard`
+- `/org/teams`
+- `/org/checkin`
+- `/org/admin/approvals`
+- `/org/admin/tracks`
+- `/org/logout`
 
-Start local supporting services:
+Shared:
+- `/verify/[token]`
+- `/api/health`
 
-```bash
-docker compose up -d
-```
+## Notes
 
-Services included:
-- PostgreSQL at localhost:5432
-- Redis at localhost:6379
-- Mailpit SMTP/UI at localhost:1025 and localhost:8025
-- MinIO API/UI at localhost:9000 and localhost:9001
-
-## Next implementation goals
-
-1. Replace email-based session with secure password or OAuth auth
-2. Add submission and judging workflow end-to-end
-3. Add QR token generation and scanner camera integration
-4. Add queue-driven notifications and reminders
-5. Add Playwright end-to-end test coverage
+- Team QR generation and verification remain intact.
+- Role-based route gates remain server-side.
+- The data layer has been shifted to Django backend calls via `src/lib/prisma.ts` adapter.

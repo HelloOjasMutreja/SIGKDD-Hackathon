@@ -1,4 +1,4 @@
-import { OrganizerApprovedRole } from "@prisma/client";
+import { OrganizerApprovedRole, UserRole } from "@/lib/domain";
 import { revalidatePath } from "next/cache";
 import { OrganizerShell } from "@/components/organizer-shell";
 import { requireApprovedOrganizer } from "@/lib/guards";
@@ -9,7 +9,7 @@ async function createTrack(formData: FormData) {
   "use server";
   const user = await requireApprovedOrganizer();
 
-  if (!hasOrgRole(user.role, user.organizerProfile?.approvedRole ?? null, ["ADMIN", OrganizerApprovedRole.TECHNICAL_LEAD])) {
+  if (!hasOrgRole(user.role, user.organizerProfile?.approvedRole ?? null, [UserRole.ADMIN, OrganizerApprovedRole.TECHNICAL_LEAD])) {
     return;
   }
 
@@ -35,7 +35,7 @@ async function toggleTrack(formData: FormData) {
   "use server";
   const user = await requireApprovedOrganizer();
 
-  if (!hasOrgRole(user.role, user.organizerProfile?.approvedRole ?? null, ["ADMIN", OrganizerApprovedRole.TECHNICAL_LEAD])) {
+  if (!hasOrgRole(user.role, user.organizerProfile?.approvedRole ?? null, [UserRole.ADMIN, OrganizerApprovedRole.TECHNICAL_LEAD])) {
     return;
   }
 
@@ -53,7 +53,7 @@ async function toggleTrack(formData: FormData) {
 export default async function OrganizerTracksPage() {
   const user = await requireApprovedOrganizer();
 
-  if (!hasOrgRole(user.role, user.organizerProfile?.approvedRole ?? null, ["ADMIN", OrganizerApprovedRole.TECHNICAL_LEAD])) {
+  if (!hasOrgRole(user.role, user.organizerProfile?.approvedRole ?? null, [UserRole.ADMIN, OrganizerApprovedRole.TECHNICAL_LEAD])) {
     return (
       <OrganizerShell>
         <section className="rounded-2xl border border-[#cdd8e5] bg-white p-6">

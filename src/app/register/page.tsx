@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { TeamMemberStatus } from "@prisma/client";
+import { TeamMemberStatus } from "@/lib/domain";
 import { prisma } from "@/lib/prisma";
 import { setParticipantSession } from "@/lib/auth";
 import { hashPassword } from "@/lib/security";

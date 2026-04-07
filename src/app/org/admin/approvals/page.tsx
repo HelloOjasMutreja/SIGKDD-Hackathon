@@ -1,4 +1,4 @@
-import { ApprovalStatus, OrganizerApprovedRole, OrganizerRequestedRole } from "@prisma/client";
+import { ApprovalStatus, OrganizerApprovedRole, UserRole } from "@/lib/domain";
 import { revalidatePath } from "next/cache";
 import { OrganizerShell } from "@/components/organizer-shell";
 import { requireApprovedOrganizer } from "@/lib/guards";
@@ -9,7 +9,7 @@ async function approveOrganizer(formData: FormData) {
   "use server";
   const actor = await requireApprovedOrganizer();
 
-  if (!hasOrgRole(actor.role, actor.organizerProfile?.approvedRole ?? null, ["ADMIN", OrganizerApprovedRole.CORE_ORGANIZER])) {
+  if (!hasOrgRole(actor.role, actor.organizerProfile?.approvedRole ?? null, [UserRole.ADMIN, OrganizerApprovedRole.CORE_ORGANIZER])) {
     return;
   }
 
@@ -44,7 +44,7 @@ async function rejectOrganizer(formData: FormData) {
   "use server";
   const actor = await requireApprovedOrganizer();
 
-  if (!hasOrgRole(actor.role, actor.organizerProfile?.approvedRole ?? null, ["ADMIN", OrganizerApprovedRole.CORE_ORGANIZER])) {
+  if (!hasOrgRole(actor.role, actor.organizerProfile?.approvedRole ?? null, [UserRole.ADMIN, OrganizerApprovedRole.CORE_ORGANIZER])) {
     return;
   }
 
@@ -67,7 +67,7 @@ async function rejectOrganizer(formData: FormData) {
 export default async function OrganizerApprovalsPage() {
   const user = await requireApprovedOrganizer();
 
-  if (!hasOrgRole(user.role, user.organizerProfile?.approvedRole ?? null, ["ADMIN", OrganizerApprovedRole.CORE_ORGANIZER])) {
+  if (!hasOrgRole(user.role, user.organizerProfile?.approvedRole ?? null, [UserRole.ADMIN, OrganizerApprovedRole.CORE_ORGANIZER])) {
     return (
       <OrganizerShell>
         <section className="rounded-2xl border border-[#cdd8e5] bg-white p-6">

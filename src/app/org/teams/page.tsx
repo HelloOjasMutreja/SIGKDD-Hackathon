@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { TeamStatus } from "@prisma/client";
+import { TeamStatus } from "@/lib/domain";
 import { OrganizerShell } from "@/components/organizer-shell";
 import { requireApprovedOrganizer } from "@/lib/guards";
 import { prisma } from "@/lib/prisma";

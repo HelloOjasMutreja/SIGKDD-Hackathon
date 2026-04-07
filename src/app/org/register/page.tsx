@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ApprovalStatus, OrganizerApprovedRole, OrganizerRequestedRole, UserRole } from "@prisma/client";
+import { ApprovalStatus, OrganizerApprovedRole, OrganizerRequestedRole, UserRole } from "@/lib/domain";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { setOrganizerSession } from "@/lib/auth";
