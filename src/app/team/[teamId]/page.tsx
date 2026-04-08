@@ -22,10 +22,32 @@ type TeamMemberWithUser = {
   };
 };
 
-type TrackItem = {
-  id: string;
-  name: string;
+const STATUS_BADGE: Record<string, string> = {
+  DRAFT: "bg-amber-100 text-amber-800 border-amber-300",
+  SUBMITTED: "bg-blue-100 text-blue-800 border-blue-300",
+  UNDER_REVIEW: "bg-indigo-100 text-indigo-800 border-indigo-300",
+  SHORTLISTED: "bg-teal-100 text-teal-800 border-teal-300",
+  REJECTED: "bg-red-100 text-red-800 border-red-300",
+  APPROVED: "bg-emerald-100 text-emerald-800 border-emerald-300",
 };
+
+const STATUS_LABEL: Record<string, string> = {
+  DRAFT: "Not Submitted",
+  SUBMITTED: "Submitted",
+  UNDER_REVIEW: "Under Review",
+  SHORTLISTED: "Shortlisted",
+  REJECTED: "Rejected",
+  APPROVED: "Approved",
+};
+
+function isValidUrl(value: string) {
+  try {
+    const parsed = new URL(value);
+    return parsed.protocol === "http:" || parsed.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
 
 async function decideJoinRequest(formData: FormData) {
   "use server";
@@ -70,7 +92,7 @@ async function removeMember(formData: FormData) {
   revalidatePath(`/team/${teamId}`);
 }
 
-async function updateTeamDetails(formData: FormData) {
+async function updateTeamProject(formData: FormData) {
   "use server";
   const user = await requireParticipant();
 
@@ -81,23 +103,32 @@ async function updateTeamDetails(formData: FormData) {
     return;
   }
 
-  const isMember = await prisma.teamMember.findFirst({
-    where: { teamId, userId: user.id, status: TeamMemberStatus.APPROVED },
-  });
-
-  if (!isMember || team.status === TeamStatus.SUBMITTED) {
+  if (team.leaderId !== user.id) {
     return;
+  }
+
+  const githubLink = String(formData.get("githubLink") ?? "").trim();
+  const projectDescription = String(formData.get("projectDescription") ?? "").trim();
+  const deployedLink = String(formData.get("deployedLink") ?? "").trim();
+
+  if (!githubLink || !projectDescription) {
+    redirect(`/team/${teamId}?error=project_required`);
+  }
+
+  if (!isValidUrl(githubLink)) {
+    redirect(`/team/${teamId}?error=github_url`);
+  }
+
+  if (deployedLink && !isValidUrl(deployedLink)) {
+    redirect(`/team/${teamId}?error=deployed_url`);
   }
 
   await prisma.team.update({
     where: { id: teamId },
     data: {
-      trackId: String(formData.get("trackId") ?? "") || null,
-      projectName: String(formData.get("projectName") ?? "").trim() || null,
-      projectDescription: String(formData.get("projectDescription") ?? "").trim() || null,
-      techStack: String(formData.get("techStack") ?? "").trim() || null,
-      githubLink: String(formData.get("githubLink") ?? "").trim() || null,
-      demoLink: String(formData.get("demoLink") ?? "").trim() || null,
+      githubLink,
+      projectDescription,
+      demoLink: deployedLink || null,
     },
   });
 
@@ -111,22 +142,17 @@ async function submitTeam(formData: FormData) {
   const teamId = String(formData.get("teamId") ?? "");
   const confirm = String(formData.get("confirm") ?? "");
 
-  const team = await prisma.team.findUnique({
-    where: { id: teamId },
-    include: {
-      members: { where: { status: TeamMemberStatus.APPROVED } },
-    },
-  });
+  const team = await prisma.team.findUnique({ where: { id: teamId } });
 
-  if (!team || team.leaderId !== user.id || team.status === TeamStatus.SUBMITTED) {
+  if (!team || team.leaderId !== user.id) {
     return;
   }
 
-  const isValid =
-    team.members.length >= 2 &&
-    Boolean(team.trackId) &&
-    Boolean(team.projectName?.trim()) &&
-    Boolean(team.projectDescription?.trim());
+  const githubLink = String(team.githubLink ?? "").trim();
+  const projectDescription = String(team.projectDescription ?? "").trim();
+  const deployedLink = String(team.demoLink ?? "").trim();
+
+  const isValid = Boolean(githubLink) && Boolean(projectDescription) && isValidUrl(githubLink) && (!deployedLink || isValidUrl(deployedLink));
 
   if (!isValid || confirm !== "on") {
     redirect(`/team/${teamId}?error=submission_requirements`);
@@ -172,19 +198,15 @@ export default async function TeamDashboardPage({ params, searchParams }: PagePr
     redirect("/team-setup");
   }
 
-  const tracks = await prisma.track.findMany({ where: { isActive: true }, orderBy: { createdAt: "desc" } });
-
   const members = team.members as TeamMemberWithUser[];
   const approvedMembers = members.filter((m) => m.status === TeamMemberStatus.APPROVED);
   const pendingMembers = members.filter((m) => m.status === TeamMemberStatus.PENDING);
   const isLeader = team.leaderId === user.id;
-  const isSubmitted = team.status === TeamStatus.SUBMITTED;
+  const statusText = STATUS_LABEL[team.status] ?? team.status;
+  const statusClass = STATUS_BADGE[team.status] ?? "bg-slate-100 text-slate-800 border-slate-300";
+  const isSubmitted = team.status !== TeamStatus.DRAFT;
 
-  const canSubmit =
-    approvedMembers.length >= 2 &&
-    Boolean(team.trackId) &&
-    Boolean(team.projectName?.trim()) &&
-    Boolean(team.projectDescription?.trim());
+  const canSubmit = Boolean(team.githubLink?.trim()) && Boolean(team.projectDescription?.trim());
 
   const inviteLink = `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/register?invite=${team.code}`;
 
@@ -193,9 +215,14 @@ export default async function TeamDashboardPage({ params, searchParams }: PagePr
       <section className="space-y-6">
         <div className="card p-6">
           <h1 className="text-2xl font-bold">{team.name}</h1>
-          <p className="mt-2 text-sm">Status: <span className="pill">{team.status}</span></p>
+          <p className="mt-2 text-sm">Status: <span className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold ${statusClass}`}>{statusText}</span></p>
           {String(qp.error ?? "") && (
-            <p className="mt-3 rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-800">Complete all required fields and confirmation before submission.</p>
+            <p className="mt-3 rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-800">
+              {String(qp.error) === "submission_requirements" && "GitHub URL and Project Description are required before submission."}
+              {String(qp.error) === "project_required" && "GitHub URL and Project Description are required."}
+              {String(qp.error) === "github_url" && "Please enter a valid GitHub Repository URL (http/https)."}
+              {String(qp.error) === "deployed_url" && "Please enter a valid Deployed Project URL (http/https)."}
+            </p>
           )}
         </div>
 
@@ -238,36 +265,76 @@ export default async function TeamDashboardPage({ params, searchParams }: PagePr
           )}
         </div>
 
-        <form action={updateTeamDetails} className="card grid gap-3 p-6 md:grid-cols-2">
-          <input type="hidden" name="teamId" value={team.id} />
-          <label className="text-sm md:col-span-2">Track Selection</label>
-          <select
-            name="trackId"
-            defaultValue={team.trackId ?? ""}
-            disabled={isSubmitted}
-            className="rounded-xl border border-border bg-surface-2 px-3 py-2 text-sm md:col-span-2"
-          >
-            <option value="">Select track</option>
-            {(tracks as TrackItem[]).map((track) => (
-              <option key={track.id} value={track.id}>{track.name}</option>
-            ))}
-          </select>
-          <input name="projectName" defaultValue={team.projectName ?? ""} disabled={isSubmitted} placeholder="Project Name" className="rounded-xl border border-border bg-surface-2 px-3 py-2 text-sm md:col-span-2" />
-          <textarea name="projectDescription" defaultValue={team.projectDescription ?? ""} disabled={isSubmitted} placeholder="Project Description" rows={4} className="rounded-xl border border-border bg-surface-2 px-3 py-2 text-sm md:col-span-2" />
-          <input name="techStack" defaultValue={team.techStack ?? ""} disabled={isSubmitted} placeholder="Tech Stack (comma separated)" className="rounded-xl border border-border bg-surface-2 px-3 py-2 text-sm md:col-span-2" />
-          <input name="githubLink" defaultValue={team.githubLink ?? ""} disabled={isSubmitted} placeholder="GitHub / Project Link" className="rounded-xl border border-border bg-surface-2 px-3 py-2 text-sm" />
-          <input name="demoLink" defaultValue={team.demoLink ?? ""} disabled={isSubmitted} placeholder="Demo Link" className="rounded-xl border border-border bg-surface-2 px-3 py-2 text-sm" />
-          {!isSubmitted && <button className="rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-white md:col-span-2">Save Draft</button>}
-        </form>
+        <section className="card p-6">
+          <h2 className="text-lg font-semibold">Project Submission</h2>
+          <p className="mt-2 text-sm text-muted">Used for pre-shortlisting evaluation and team collaboration review.</p>
+
+          {isLeader ? (
+            <form action={updateTeamProject} className="mt-4 grid gap-3 md:grid-cols-2">
+              <input type="hidden" name="teamId" value={team.id} />
+              <div className="md:col-span-2">
+                <label htmlFor="githubLink" className="mb-1 block text-sm font-medium">GitHub Repository URL *</label>
+                <input
+                  id="githubLink"
+                  name="githubLink"
+                  defaultValue={team.githubLink ?? ""}
+                  placeholder="https://github.com/your-org/your-repo"
+                  className="w-full rounded-xl border border-border bg-surface-2 px-3 py-2 text-sm"
+                />
+              </div>
+              <div className="md:col-span-2">
+                <label htmlFor="projectDescription" className="mb-1 block text-sm font-medium">Project Description *</label>
+                <textarea
+                  id="projectDescription"
+                  name="projectDescription"
+                  defaultValue={team.projectDescription ?? ""}
+                  placeholder="Describe your solution, architecture, and collaborative contributions."
+                  rows={5}
+                  className="w-full rounded-xl border border-border bg-surface-2 px-3 py-2 text-sm"
+                />
+              </div>
+              <div className="md:col-span-2">
+                <label htmlFor="deployedLink" className="mb-1 block text-sm font-medium">Deployed Project Link (Optional)</label>
+                <input
+                  id="deployedLink"
+                  name="deployedLink"
+                  defaultValue={team.demoLink ?? ""}
+                  placeholder="https://your-project-demo.vercel.app"
+                  className="w-full rounded-xl border border-border bg-surface-2 px-3 py-2 text-sm"
+                />
+              </div>
+              <button className="rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-white md:col-span-2">Update Project Details</button>
+            </form>
+          ) : (
+            <div className="mt-4 grid gap-3 text-sm">
+              <div className="rounded-lg border border-border bg-surface-2 p-3">
+                <p className="font-semibold">GitHub Repository URL</p>
+                <p className="mt-1 break-all">
+                  {team.githubLink ? <a href={team.githubLink} className="text-accent" target="_blank" rel="noreferrer">{team.githubLink}</a> : "Not provided"}
+                </p>
+              </div>
+              <div className="rounded-lg border border-border bg-surface-2 p-3">
+                <p className="font-semibold">Project Description</p>
+                <p className="mt-1 whitespace-pre-wrap text-muted">{team.projectDescription?.trim() || "Not provided"}</p>
+              </div>
+              <div className="rounded-lg border border-border bg-surface-2 p-3">
+                <p className="font-semibold">Deployed Project Link</p>
+                <p className="mt-1 break-all">
+                  {team.demoLink ? <a href={team.demoLink} className="text-accent" target="_blank" rel="noreferrer">{team.demoLink}</a> : "Not provided"}
+                </p>
+              </div>
+            </div>
+          )}
+        </section>
 
         {!isSubmitted && isLeader && (
           <form action={submitTeam} className="card p-6">
             <input type="hidden" name="teamId" value={team.id} />
             <h2 className="text-lg font-semibold">Final Submission</h2>
-            <p className="mt-2 text-sm text-muted">Team can submit only after minimum 2 approved members, selected track, and complete project basics.</p>
+            <p className="mt-2 text-sm text-muted">This submits the current team project details for shortlisting review.</p>
             <label className="mt-3 flex items-center gap-2 text-sm">
               <input type="checkbox" name="confirm" />
-              I confirm all details are correct and cannot be edited after submission.
+              I confirm all team project details are ready for review.
             </label>
             <button disabled={!canSubmit} className="mt-4 rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50">Submit Team Registration</button>
           </form>
