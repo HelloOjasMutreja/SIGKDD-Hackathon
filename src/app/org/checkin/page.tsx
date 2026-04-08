@@ -15,14 +15,14 @@ async function markCheckin(formData: FormData) {
     return;
   }
 
-  const token = String(formData.get("token") ?? "").trim();
-  if (!token) {
-    redirect("/org/checkin?error=missing_token");
+  const teamCode = String(formData.get("teamCode") ?? "").trim().toUpperCase();
+  if (!teamCode) {
+    redirect("/org/checkin?error=missing_team_code");
   }
 
-  const team = await prisma.team.findFirst({ where: { qrToken: token } });
+  const team = await prisma.team.findFirst({ where: { code: teamCode } });
   if (!team) {
-    redirect("/org/checkin?error=invalid_token");
+    redirect("/org/checkin?error=invalid_team_code");
   }
 
   const already = await prisma.checkin.findFirst({ where: { teamId: team.id } });
@@ -74,12 +74,12 @@ export default async function OrgCheckinPage({ searchParams }: SearchProps) {
     <OrganizerShell>
       <section className="space-y-6">
         <div className="rounded-2xl border border-[#cdd8e5] bg-white p-6">
-          <h1 className="text-2xl font-bold text-[#17324d]">QR Check-in</h1>
-          <p className="mt-1 text-sm text-[#4f647b]">Paste verification token from /verify/[token] URL after scan.</p>
+          <h1 className="text-2xl font-bold text-[#17324d]">Manual Check-in</h1>
+          <p className="mt-1 text-sm text-[#4f647b]">Enter the 6-character team code to mark attendance.</p>
           {error && <p className="mt-3 rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-800">Error: {error.replaceAll("_", " ")}</p>}
           {success && <p className="mt-3 rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">Checked in team: {success}</p>}
           <form action={markCheckin} className="mt-4 flex gap-3">
-            <input name="token" required placeholder="Verification token" className="flex-1 rounded-xl border border-[#cdd8e5] px-3 py-2 text-sm" />
+            <input name="teamCode" required maxLength={6} placeholder="Team code (e.g., HX92KL)" className="flex-1 rounded-xl border border-[#cdd8e5] px-3 py-2 text-sm uppercase" />
             <button className="rounded-xl bg-[#17324d] px-4 py-2 text-sm font-semibold text-white">Mark Checked-In</button>
           </form>
         </div>

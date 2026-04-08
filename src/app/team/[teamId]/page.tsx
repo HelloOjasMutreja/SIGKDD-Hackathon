@@ -1,16 +1,30 @@
-import Link from "next/link";
-import QRCode from "qrcode";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { TeamMemberStatus, TeamStatus } from "@/lib/domain";
 import { ParticipantShell } from "@/components/participant-shell";
 import { prisma } from "@/lib/prisma";
 import { requireParticipant } from "@/lib/guards";
-import { makeToken } from "@/lib/security";
 
 type PageProps = {
   params: Promise<{ teamId: string }>;
   searchParams: Promise<Record<string, string | string[] | undefined>>;
+};
+
+type TeamMemberWithUser = {
+  id: string;
+  status: TeamMemberStatus;
+  userId: string;
+  user: {
+    fullName: string;
+    participant?: {
+      registerNumber?: string | null;
+    } | null;
+  };
+};
+
+type TrackItem = {
+  id: string;
+  name: string;
 };
 
 async function decideJoinRequest(formData: FormData) {
@@ -118,17 +132,11 @@ async function submitTeam(formData: FormData) {
     redirect(`/team/${teamId}?error=submission_requirements`);
   }
 
-  const token = makeToken(18);
-  const verifyUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/verify/${token}`;
-  const qrCodeUrl = await QRCode.toDataURL(verifyUrl);
-
   await prisma.team.update({
     where: { id: teamId },
     data: {
       status: TeamStatus.SUBMITTED,
       submittedAt: new Date(),
-      qrToken: token,
-      qrCodeUrl,
     },
   });
 
@@ -166,8 +174,9 @@ export default async function TeamDashboardPage({ params, searchParams }: PagePr
 
   const tracks = await prisma.track.findMany({ where: { isActive: true }, orderBy: { createdAt: "desc" } });
 
-  const approvedMembers = team.members.filter((m: any) => m.status === TeamMemberStatus.APPROVED);
-  const pendingMembers = team.members.filter((m: any) => m.status === TeamMemberStatus.PENDING);
+  const members = team.members as TeamMemberWithUser[];
+  const approvedMembers = members.filter((m) => m.status === TeamMemberStatus.APPROVED);
+  const pendingMembers = members.filter((m) => m.status === TeamMemberStatus.PENDING);
   const isLeader = team.leaderId === user.id;
   const isSubmitted = team.status === TeamStatus.SUBMITTED;
 
@@ -195,7 +204,7 @@ export default async function TeamDashboardPage({ params, searchParams }: PagePr
           <p className="mt-2 text-sm">Team Code: <span className="pill">{team.code}</span></p>
           <p className="mt-1 text-sm text-muted">Invite Link: <a className="text-accent" href={inviteLink}>{inviteLink}</a></p>
           <ul className="mt-3 grid gap-2">
-            {approvedMembers.map((member: any) => (
+            {approvedMembers.map((member) => (
               <li key={member.id} className="rounded-lg border border-border bg-surface-2 p-3 text-sm">
                 {member.user.fullName} ({member.user.participant?.registerNumber ?? "N/A"}) {member.userId === team.leaderId ? "- Leader" : ""}
                 {isLeader && member.userId !== team.leaderId && !isSubmitted && (
@@ -213,7 +222,7 @@ export default async function TeamDashboardPage({ params, searchParams }: PagePr
             <div className="mt-4">
               <h3 className="text-sm font-semibold">Pending Requests</h3>
               <div className="mt-2 grid gap-2">
-                {pendingMembers.map((pending: any) => (
+                {pendingMembers.map((pending) => (
                   <div key={pending.id} className="rounded-lg border border-border bg-surface-2 p-3 text-sm">
                     {pending.user.fullName}
                     <form action={decideJoinRequest} className="mt-2 flex gap-2">
@@ -239,7 +248,7 @@ export default async function TeamDashboardPage({ params, searchParams }: PagePr
             className="rounded-xl border border-border bg-surface-2 px-3 py-2 text-sm md:col-span-2"
           >
             <option value="">Select track</option>
-            {tracks.map((track: any) => (
+            {(tracks as TrackItem[]).map((track) => (
               <option key={track.id} value={track.id}>{track.name}</option>
             ))}
           </select>
@@ -264,12 +273,10 @@ export default async function TeamDashboardPage({ params, searchParams }: PagePr
           </form>
         )}
 
-        {isSubmitted && team.qrCodeUrl && (
+        {isSubmitted && (
           <section className="card p-6">
-            <h2 className="text-lg font-semibold">Check-in QR</h2>
-            <p className="mt-1 text-sm text-muted">This QR is shared across all team members.</p>
-            <img src={team.qrCodeUrl} alt="Team check-in QR" className="mt-4 h-56 w-56 rounded-xl border border-border bg-white p-2" />
-            <a href={team.qrCodeUrl} download={`${team.name}-qr.png`} className="mt-3 inline-block rounded-lg border border-border px-3 py-1.5 text-sm">Download QR</a>
+            <h2 className="text-lg font-semibold">Submission Locked</h2>
+            <p className="mt-1 text-sm text-muted">Your team registration has been submitted successfully. Check-in tokens and QR flow are disabled for now.</p>
           </section>
         )}
       </section>
