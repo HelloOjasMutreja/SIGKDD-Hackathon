@@ -17,17 +17,17 @@ async function markCheckin(formData: FormData) {
 
   const teamCode = String(formData.get("teamCode") ?? "").trim().toUpperCase();
   if (!teamCode) {
-    redirect("/org/checkin?error=missing_team_code");
+    redirect("/organizer/checkin?error=missing_team_code");
   }
 
   const team = await prisma.team.findFirst({ where: { code: teamCode } });
   if (!team) {
-    redirect("/org/checkin?error=invalid_team_code");
+    redirect("/organizer/checkin?error=invalid_team_code");
   }
 
   const already = await prisma.checkin.findFirst({ where: { teamId: team.id } });
   if (already) {
-    redirect("/org/checkin?error=already_checkedin");
+    redirect("/organizer/checkin?error=already_checkedin");
   }
 
   await prisma.checkin.create({
@@ -37,7 +37,7 @@ async function markCheckin(formData: FormData) {
     },
   });
 
-  redirect(`/org/checkin?success=${team.name}`);
+  redirect(`/organizer/checkin?success=${team.name}`);
 }
 
 type SearchProps = {
@@ -111,3 +111,4 @@ export default async function OrgCheckinPage({ searchParams }: SearchProps) {
     </OrganizerShell>
   );
 }
+

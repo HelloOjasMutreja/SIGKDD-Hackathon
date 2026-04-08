@@ -20,13 +20,12 @@ async function organizerLogin(formData: FormData) {
     include: { organizerProfile: true },
   });
 
-  if (
-    !user ||
-    !user.organizerProfile ||
-    (user.role !== UserRole.ORGANIZER && user.role !== UserRole.ADMIN) ||
-    user.passwordHash !== hashPassword(password)
-  ) {
-    redirect("/org/login?error=invalid_credentials");
+  if (!user || user.passwordHash !== hashPassword(password)) {
+    redirect("/organizer/login?error=invalid_credentials");
+  }
+
+  if (!user.organizerProfile || (user.role !== UserRole.ORGANIZER && user.role !== UserRole.ADMIN)) {
+    redirect("/organizer/login?error=organizer_access_not_assigned");
   }
 
   await setOrganizerSession({
@@ -37,10 +36,10 @@ async function organizerLogin(formData: FormData) {
   });
 
   if (user.organizerProfile.status === ApprovalStatus.APPROVED) {
-    redirect("/org/dashboard");
+    redirect("/organizer/dashboard");
   }
 
-  redirect("/org/pending");
+  redirect("/organizer/pending");
 }
 
 export default async function OrgLoginPage({ searchParams }: SearchProps) {
@@ -53,15 +52,22 @@ export default async function OrgLoginPage({ searchParams }: SearchProps) {
         <section className="rounded-2xl border border-[#cdd8e5] bg-white p-6">
           <h1 className="text-2xl font-bold text-[#17324d]">Organizer Login</h1>
           <p className="mt-1 text-sm text-[#4f647b]">Login to continue into the organizer workspace.</p>
-          {error && <p className="mt-3 rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-800">Invalid credentials.</p>}
+          {error && (
+            <p className="mt-3 rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-800">
+              {error === "organizer_access_not_assigned"
+                ? "Organizer access not assigned to this account"
+                : "Invalid credentials."}
+            </p>
+          )}
           <form action={organizerLogin} className="mt-5 grid gap-3">
             <input name="email" type="email" required placeholder="Email" className="rounded-xl border border-[#cdd8e5] px-3 py-2 text-sm" />
             <input name="password" type="password" required placeholder="Password" className="rounded-xl border border-[#cdd8e5] px-3 py-2 text-sm" />
             <button className="rounded-xl bg-[#17324d] px-4 py-2 text-sm font-semibold text-white">Login</button>
           </form>
-          <p className="mt-4 text-sm text-[#4f647b]">No organizer account? <Link href="/org/register" className="text-[#17324d]">Register</Link></p>
+          <p className="mt-4 text-sm text-[#4f647b]">No organizer account? <Link href="/organizer/register" className="text-[#17324d]">Register</Link></p>
         </section>
       </main>
     </div>
   );
 }
+

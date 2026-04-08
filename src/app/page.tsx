@@ -20,7 +20,6 @@ export default function ParticipantPortalHome() {
           <div className="mt-7 flex flex-wrap gap-3">
             <Link href="/register" className="rounded-full bg-accent px-6 py-3 text-sm font-semibold text-white">Start Registration</Link>
             <Link href="/login" className="rounded-full border border-border bg-surface px-6 py-3 text-sm font-semibold">Participant Login</Link>
-            <Link href="/org" className="rounded-full border border-border bg-white px-6 py-3 text-sm font-semibold">Organizer Portal</Link>
           </div>
 
           <div className="mt-8 grid max-w-3xl gap-3 text-sm md:grid-cols-3">
@@ -53,3 +52,4 @@ export default function ParticipantPortalHome() {
     </div>
   );
 }
+

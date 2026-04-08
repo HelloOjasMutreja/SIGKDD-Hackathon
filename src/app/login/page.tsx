@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { setParticipantSession } from "@/lib/auth";
 import { getParticipantTeamState } from "@/lib/guards";
+import { UserRole } from "@/lib/domain";
 import { hashPassword } from "@/lib/security";
 
 type SearchProps = {
@@ -14,12 +15,12 @@ async function participantLogin(formData: FormData) {
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const password = String(formData.get("password") ?? "");
 
-  const user = await prisma.user.findUnique({ where: { email } });
-  if (!user || user.role !== "PARTICIPANT" || user.passwordHash !== hashPassword(password)) {
+  const user = await prisma.user.findUnique({ where: { email }, include: { participant: true } });
+  if (!user || !user.participant || user.passwordHash !== hashPassword(password)) {
     redirect("/login?error=invalid_credentials");
   }
 
-  await setParticipantSession({ userId: user.id, role: user.role });
+  await setParticipantSession({ userId: user.id, role: UserRole.PARTICIPANT });
 
   const state = await getParticipantTeamState(user.id);
   if (state.state === "approved") {

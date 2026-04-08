@@ -31,13 +31,14 @@ export default async function OrgDashboardPage() {
         <div className="rounded-2xl border border-[#cdd8e5] bg-white p-6">
           <h2 className="text-lg font-semibold text-[#17324d]">Quick Links</h2>
           <div className="mt-3 flex flex-wrap gap-3">
-            <Link href="/org/teams" className="rounded-full border border-[#cdd8e5] px-4 py-2 text-sm">Teams</Link>
-            <Link href="/org/admin/approvals" className="rounded-full border border-[#cdd8e5] px-4 py-2 text-sm">Approvals</Link>
-            <Link href="/org/checkin" className="rounded-full border border-[#cdd8e5] px-4 py-2 text-sm">Check-in</Link>
-            <Link href="/org/admin/tracks" className="rounded-full border border-[#cdd8e5] px-4 py-2 text-sm">Tracks</Link>
+            <Link href="/organizer/teams" className="rounded-full border border-[#cdd8e5] px-4 py-2 text-sm">Teams</Link>
+            <Link href="/organizer/admin/approvals" className="rounded-full border border-[#cdd8e5] px-4 py-2 text-sm">Approvals</Link>
+            <Link href="/organizer/checkin" className="rounded-full border border-[#cdd8e5] px-4 py-2 text-sm">Check-in</Link>
+            <Link href="/organizer/admin/tracks" className="rounded-full border border-[#cdd8e5] px-4 py-2 text-sm">Tracks</Link>
           </div>
         </div>
       </section>
     </OrganizerShell>
   );
 }
+

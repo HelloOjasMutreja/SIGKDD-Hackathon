@@ -3,5 +3,6 @@ import { clearSessions } from "@/lib/auth";
 
 export default async function OrgLogoutPage() {
   await clearSessions();
-  redirect("/org/login");
+  redirect("/organizer/login");
 }
+

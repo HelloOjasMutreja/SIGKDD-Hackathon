@@ -29,6 +29,7 @@ async function createTrack(formData: FormData) {
   });
 
   revalidatePath("/org/admin/tracks");
+  revalidatePath("/organizer/admin/tracks");
 }
 
 async function toggleTrack(formData: FormData) {
@@ -48,6 +49,7 @@ async function toggleTrack(formData: FormData) {
   });
 
   revalidatePath("/org/admin/tracks");
+  revalidatePath("/organizer/admin/tracks");
 }
 
 export default async function OrganizerTracksPage() {
@@ -96,3 +98,4 @@ export default async function OrganizerTracksPage() {
     </OrganizerShell>
   );
 }
+

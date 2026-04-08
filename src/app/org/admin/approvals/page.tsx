@@ -38,6 +38,7 @@ async function approveOrganizer(formData: FormData) {
   });
 
   revalidatePath("/org/admin/approvals");
+  revalidatePath("/organizer/admin/approvals");
 }
 
 async function rejectOrganizer(formData: FormData) {
@@ -62,6 +63,7 @@ async function rejectOrganizer(formData: FormData) {
   });
 
   revalidatePath("/org/admin/approvals");
+  revalidatePath("/organizer/admin/approvals");
 }
 
 export default async function OrganizerApprovalsPage() {
@@ -124,3 +126,4 @@ export default async function OrganizerApprovalsPage() {
     </OrganizerShell>
   );
 }
+

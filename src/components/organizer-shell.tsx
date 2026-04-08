@@ -5,13 +5,13 @@ export function OrganizerShell({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen bg-[#f4f8fb]">
       <header className="border-b border-[#cdd8e5] bg-white">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-          <Link href="/org/dashboard" className="text-lg font-bold text-[#17324d]">SIGKDD Organizer Portal</Link>
+          <Link href="/organizer/dashboard" className="text-lg font-bold text-[#17324d]">SIGKDD Organizer Portal</Link>
           <nav className="flex gap-2 text-sm">
-            <Link href="/org/dashboard" className="rounded-full border border-[#cdd8e5] px-3 py-1.5">Dashboard</Link>
-            <Link href="/org/teams" className="rounded-full border border-[#cdd8e5] px-3 py-1.5">Teams</Link>
-            <Link href="/org/checkin" className="rounded-full border border-[#cdd8e5] px-3 py-1.5">Check-in</Link>
-            <Link href="/org/admin/approvals" className="rounded-full border border-[#cdd8e5] px-3 py-1.5">Approvals</Link>
-            <Link href="/org/logout" className="rounded-full bg-[#17324d] px-3 py-1.5 text-white">Logout</Link>
+            <Link href="/organizer/dashboard" className="rounded-full border border-[#cdd8e5] px-3 py-1.5">Dashboard</Link>
+            <Link href="/organizer/teams" className="rounded-full border border-[#cdd8e5] px-3 py-1.5">Teams</Link>
+            <Link href="/organizer/checkin" className="rounded-full border border-[#cdd8e5] px-3 py-1.5">Check-in</Link>
+            <Link href="/organizer/admin/approvals" className="rounded-full border border-[#cdd8e5] px-3 py-1.5">Approvals</Link>
+            <Link href="/organizer/logout" className="rounded-full bg-[#17324d] px-3 py-1.5 text-white">Logout</Link>
           </nav>
         </div>
       </header>
@@ -19,3 +19,4 @@ export function OrganizerShell({ children }: { children: React.ReactNode }) {
     </div>
   );
 }
+

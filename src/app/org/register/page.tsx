@@ -21,16 +21,16 @@ async function registerOrganizer(formData: FormData) {
   const reasonForJoining = String(formData.get("reasonForJoining") ?? "").trim();
 
   if (!fullName || !email || !password || !phone || !requestedRole || !reasonForJoining) {
-    redirect("/org/register?error=missing");
+    redirect("/organizer/register?error=missing");
   }
 
   if (password !== confirmPassword) {
-    redirect("/org/register?error=password_mismatch");
+    redirect("/organizer/register?error=password_mismatch");
   }
 
   const existing = await prisma.user.findUnique({ where: { email } });
   if (existing) {
-    redirect("/org/register?error=email_exists");
+    redirect("/organizer/register?error=email_exists");
   }
 
   const hasAdmin = await prisma.user.count({ where: { role: UserRole.ADMIN } });
@@ -68,10 +68,10 @@ async function registerOrganizer(formData: FormData) {
   });
 
   if (autoApprove) {
-    redirect("/org/dashboard");
+    redirect("/organizer/dashboard");
   }
 
-  redirect("/org/pending");
+  redirect("/organizer/pending");
 }
 
 export default async function OrgRegisterPage({ searchParams }: SearchProps) {
@@ -102,9 +102,10 @@ export default async function OrgRegisterPage({ searchParams }: SearchProps) {
             <textarea name="reasonForJoining" required placeholder="Reason for joining" className="rounded-xl border border-[#cdd8e5] px-3 py-2 text-sm md:col-span-2" rows={4} />
             <button className="rounded-xl bg-[#17324d] px-4 py-2 text-sm font-semibold text-white md:col-span-2">Submit organizer request</button>
           </form>
-          <p className="mt-4 text-sm text-[#4f647b]">Already registered? <Link href="/org/login" className="text-[#17324d]">Login</Link></p>
+          <p className="mt-4 text-sm text-[#4f647b]">Already registered? <Link href="/organizer/login" className="text-[#17324d]">Login</Link></p>
         </section>
       </main>
     </div>
   );
 }
+

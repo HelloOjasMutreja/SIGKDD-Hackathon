@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { TeamMemberStatus } from "@/lib/domain";
 import { prisma } from "@/lib/prisma";
 import { setParticipantSession } from "@/lib/auth";
+import { UserRole } from "@/lib/domain";
 import { hashPassword } from "@/lib/security";
 
 const REGISTER_REGEX = /^RA\d{13}$/;
@@ -50,7 +51,7 @@ export async function registerParticipant(formData: FormData) {
 
   const exists = await prisma.user.findUnique({ where: { email } });
   if (exists) {
-    await setParticipantSession({ userId: exists.id, role: exists.role });
+    await setParticipantSession({ userId: exists.id, role: UserRole.PARTICIPANT });
 
     if (inviteCode) {
       const invitedTeam = await prisma.team.findUnique({ where: { code: inviteCode } });
@@ -106,7 +107,7 @@ export async function registerParticipant(formData: FormData) {
     },
   });
 
-  await setParticipantSession({ userId: user.id, role: user.role });
+  await setParticipantSession({ userId: user.id, role: UserRole.PARTICIPANT });
 
   if (inviteCode) {
     const invitedTeam = await prisma.team.findUnique({ where: { code: inviteCode } });
