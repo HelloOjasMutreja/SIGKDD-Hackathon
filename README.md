@@ -1,59 +1,46 @@
 # SIGKDD Hackathon Portal
 
-This project now runs on a clean split stack:
-- Frontend: Next.js (existing UI)
-- Backend: Django + SQLite (built-in Django storage and ORM)
+This project is a Next.js frontend deployed on Vercel with Supabase as the backend.
 
-Prisma, Docker, and related infra scaffolding were removed from runtime flow.
+## Stack
 
-## Project Structure
+- Frontend: Next.js + TypeScript + Tailwind
+- Backend: Supabase Postgres
+- Auth/session handling: custom server-side session cookies
+- Deployment target: Vercel
 
-- `src/` - Next.js participant + organizer frontend
-- `backend/` - Django backend API and data models
-
-## Backend (Django)
-
-### Setup
-
-```bash
-cd backend
-python -m venv .venv
-.venv\Scripts\activate
-pip install -r requirements.txt
-python manage.py migrate
-python manage.py runserver
-```
-
-Backend base URL (default): `http://127.0.0.1:8000`
-
-### API Endpoints
-
-- `GET /api/health`
-- `POST /api/query`
-
-The frontend uses `POST /api/query` as a typed model-action bridge (Prisma-like call shape, Django execution).
-
-## Frontend (Next.js)
-
-### Setup
+## Local Setup
 
 ```bash
 npm install
 npm run dev
 ```
 
-Frontend base URL (default): `http://localhost:3000`
-
 ## Environment
 
-Copy `.env.example` to `.env` and ensure:
+Copy `.env.example` to `.env.local` and set:
 
 ```env
 NEXT_PUBLIC_APP_URL=http://localhost:3000
-DJANGO_API_URL=http://127.0.0.1:8000
+NEXT_PUBLIC_SUPABASE_URL=https://your-project-ref.supabase.co
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your-publishable-key
+SUPABASE_URL=https://your-project-ref.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=your-supabase-service-role-key
 ```
 
-## Implemented Portals and Routes
+## Supabase Schema
+
+Apply [supabase/schema.sql](supabase/schema.sql) in the Supabase SQL Editor.
+
+## Vercel Deployment
+
+1. Import the GitHub repo into Vercel.
+2. Set the same environment variables in the Vercel project settings.
+3. Deploy with the default Next.js build command.
+
+No custom build adapter is required for Vercel.
+
+## Key Routes
 
 Participant:
 - `/`
@@ -85,6 +72,6 @@ Shared:
 
 ## Notes
 
-- Team QR generation and verification remain intact.
-- Role-based route gates remain server-side.
-- The data layer has been shifted to Django backend calls via `src/lib/prisma.ts` adapter.
+- Registration is a 4-step controlled form that preserves input state across steps.
+- QR flow is paused for now; manual code-based check-in is used instead.
+- The app is currently configured for Vercel-compatible deployment.
