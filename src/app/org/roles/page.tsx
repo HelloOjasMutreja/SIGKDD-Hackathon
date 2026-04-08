@@ -6,6 +6,7 @@ import { FormSubmitButton } from "@/components/form-submit-button";
 import { requireApprovedOrganizer } from "@/lib/guards";
 import { canUseOrganizerCapability } from "@/lib/org-access";
 import { prisma } from "@/lib/prisma";
+import { buildAlertUrl } from "@/lib/alerts";
 import { formFieldClass, formSelectClass } from "@/lib/utils";
 
 async function updateRole(formData: FormData) {
@@ -39,6 +40,12 @@ async function updateRole(formData: FormData) {
 
   revalidatePath("/organizer/roles");
   revalidatePath("/organizer/admin/approvals");
+  redirect(buildAlertUrl("/organizer/roles", {
+    variant: "success",
+    title: "Role change saved.",
+    message: "The organizer role has been updated.",
+    hint: `Assigned role: ${approvedRole.replaceAll("_", " ")}.`,
+  }));
 }
 
 export default async function OrganizerRolesPage() {

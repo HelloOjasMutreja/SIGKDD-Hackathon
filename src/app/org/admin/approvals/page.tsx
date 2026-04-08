@@ -6,6 +6,7 @@ import { requireApprovedOrganizer } from "@/lib/guards";
 import { hasOrgRole } from "@/lib/org-access";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
+import { buildAlertUrl } from "@/lib/alerts";
 import { formFieldClass, formSelectClass } from "@/lib/utils";
 
 async function approveOrganizer(formData: FormData) {
@@ -50,6 +51,12 @@ async function approveOrganizer(formData: FormData) {
 
   revalidatePath("/org/admin/approvals");
   revalidatePath("/organizer/admin/approvals");
+  redirect(buildAlertUrl("/organizer/admin/approvals", {
+    variant: "success",
+    title: "Role change saved.",
+    message: "Organizer role updated successfully.",
+    hint: `Assigned role: ${role.replaceAll("_", " ")}.`,
+  }));
 }
 
 async function rejectOrganizer(formData: FormData) {
@@ -79,6 +86,12 @@ async function rejectOrganizer(formData: FormData) {
 
   revalidatePath("/org/admin/approvals");
   revalidatePath("/organizer/admin/approvals");
+  redirect(buildAlertUrl("/organizer/admin/approvals", {
+    variant: "warning",
+    title: "Role change saved.",
+    message: "Organizer request rejected.",
+    hint: reason || "No rejection reason was provided.",
+  }));
 }
 
 export default async function OrganizerApprovalsPage() {

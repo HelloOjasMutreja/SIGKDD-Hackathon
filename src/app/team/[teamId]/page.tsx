@@ -6,6 +6,8 @@ import { ParticipantShell } from "@/components/participant-shell";
 import { getParticipantTeamState } from "@/lib/guards";
 import { prisma } from "@/lib/prisma";
 import { requireParticipant } from "@/lib/guards";
+import { SectionAlert } from "@/components/section-alert";
+import { buildAlertUrl } from "@/lib/alerts";
 
 type PageProps = {
   params: Promise<{ teamId: string }>;
@@ -46,17 +48,34 @@ const MIN_TEAM_SIZE = 3;
 const MAX_TEAM_SIZE = 4;
 
 const ERROR_MESSAGES: Record<string, string> = {
-  submission_requirements: "Check the confirmation box after the team size and project details are complete.",
-  project_required: "Add the GitHub repository link and project description before submitting.",
-  github_required: "Add the GitHub repository link before submitting.",
-  description_required: "Add the project description before submitting.",
+  project_required: "Project submission incomplete.",
+  github_required: "Project submission incomplete.",
+  description_required: "Project submission incomplete.",
+  github_url: "Enter a valid GitHub repository URL.",
+  deployed_url: "Enter a valid deployed project URL.",
   team_too_small: "Team confirmation is blocked until at least 3 members have approved the team.",
   team_too_large: "Team confirmation is blocked because the team cannot exceed 4 approved members.",
   team_pending_members: "Team confirmation is blocked until every member has joined the team.",
-  confirm_required: "Check the confirmation box to confirm the submitted information is correct.",
+  confirm_required: "You must confirm details before submission.",
   already_submitted: "This team has already been confirmed and is locked.",
   team_locked: "Details locked after team confirmation.",
 };
+
+const MEMBER_ERROR_MESSAGES: Record<string, string> = {
+  team_locked: "Details locked after team confirmation.",
+  member_not_found: "The selected member could not be found.",
+};
+
+const PROJECT_ERROR_MESSAGES: Record<string, string> = {
+  team_locked: "Details locked after team confirmation.",
+  github_url: "Enter a valid GitHub repository URL.",
+  deployed_url: "Enter a valid deployed project URL.",
+};
+
+function getSectionAlertCode(code: string, messages: Record<string, string>) {
+  const message = messages[code];
+  return message ? { code, message } : null;
+}
 
 function isValidUrl(value: string) {
   try {
@@ -80,7 +99,7 @@ async function decideJoinRequest(formData: FormData) {
   }
 
   if (team.status !== TeamStatus.DRAFT) {
-    redirect(`/team/${teamId}?error=team_locked`);
+    redirect(`/team/${teamId}?memberError=team_locked`);
   }
 
   await prisma.teamMember.update({
@@ -92,6 +111,15 @@ async function decideJoinRequest(formData: FormData) {
   });
 
   revalidatePath(`/team/${teamId}`);
+  if (decision === "approve") {
+    redirect(buildAlertUrl(`/team/${teamId}`, {
+      variant: "success",
+      title: "Member added successfully.",
+      message: "The request was approved and the member can now access the team dashboard.",
+    }));
+  }
+
+  redirect(`/team/${teamId}`);
 }
 
 async function removeMember(formData: FormData) {
@@ -106,7 +134,7 @@ async function removeMember(formData: FormData) {
   }
 
   if (team.status !== TeamStatus.DRAFT) {
-    redirect(`/team/${teamId}?error=team_locked`);
+    redirect(`/team/${teamId}?memberError=team_locked`);
   }
 
   const member = await prisma.teamMember.findUnique({ where: { id: memberId } });
@@ -116,6 +144,11 @@ async function removeMember(formData: FormData) {
 
   await prisma.teamMember.delete({ where: { id: memberId } });
   revalidatePath(`/team/${teamId}`);
+  redirect(buildAlertUrl(`/team/${teamId}`, {
+    variant: "info",
+    title: "Member removed.",
+    message: "The member was removed from the team roster.",
+  }));
 }
 
 async function updateTeamProject(formData: FormData) {
@@ -133,32 +166,33 @@ async function updateTeamProject(formData: FormData) {
     return;
   }
 
+  if (team.status !== TeamStatus.DRAFT) {
+    redirect(`/team/${teamId}?projectError=team_locked`);
+  }
+
   const githubLink = String(formData.get("githubLink") ?? "").trim();
   const projectDescription = String(formData.get("projectDescription") ?? "").trim();
   const deployedLink = String(formData.get("deployedLink") ?? "").trim();
 
-  if (!githubLink || !projectDescription) {
-    redirect(`/team/${teamId}?error=project_required`);
-  }
-
-  if (!isValidUrl(githubLink)) {
-    redirect(`/team/${teamId}?error=github_url`);
+  if (githubLink && !isValidUrl(githubLink)) {
+    redirect(`/team/${teamId}?projectError=github_url`);
   }
 
   if (deployedLink && !isValidUrl(deployedLink)) {
-    redirect(`/team/${teamId}?error=deployed_url`);
+    redirect(`/team/${teamId}?projectError=deployed_url`);
   }
 
   await prisma.team.update({
     where: { id: teamId },
     data: {
-      githubLink,
-      projectDescription,
+      githubLink: githubLink || null,
+      projectDescription: projectDescription || null,
       demoLink: deployedLink || null,
     },
   });
 
   revalidatePath(`/team/${teamId}`);
+  redirect(`/team/${teamId}?projectSaved=1`);
 }
 
 async function submitTeam(formData: FormData) {
@@ -182,11 +216,11 @@ async function submitTeam(formData: FormData) {
   }
 
   if (team.status !== TeamStatus.DRAFT) {
-    redirect(`/team/${teamId}?error=team_locked`);
+    redirect(`/team/${teamId}?confirmationError=team_locked`);
   }
 
-  if (team.status !== TeamStatus.DRAFT) {
-    redirect(`/team/${teamId}?error=already_submitted`);
+  if (!confirm || confirm !== "on") {
+    redirect(`/team/${teamId}?confirmationError=confirm_required`);
   }
 
   const approvedMemberCount = team.members.filter((member: TeamMemberWithUser) => member.status === TeamMemberStatus.APPROVED).length;
@@ -197,39 +231,35 @@ async function submitTeam(formData: FormData) {
   const deployedLink = String(team.demoLink ?? "").trim();
 
   if (approvedMemberCount < MIN_TEAM_SIZE) {
-    redirect(`/team/${teamId}?error=team_too_small`);
+    redirect(`/team/${teamId}?confirmationError=team_too_small&projectError=project_required`);
   }
 
   if (approvedMemberCount > MAX_TEAM_SIZE) {
-    redirect(`/team/${teamId}?error=team_too_large`);
+    redirect(`/team/${teamId}?confirmationError=team_too_large`);
   }
 
   if (hasPendingMembers) {
-    redirect(`/team/${teamId}?error=team_pending_members`);
+    redirect(`/team/${teamId}?confirmationError=team_pending_members`);
   }
 
   if (!githubLink && !projectDescription) {
-    redirect(`/team/${teamId}?error=project_required`);
+    redirect(`/team/${teamId}?projectError=project_required&confirmationError=project_required`);
   }
 
   if (!githubLink) {
-    redirect(`/team/${teamId}?error=github_required`);
+    redirect(`/team/${teamId}?projectError=github_required&confirmationError=project_required`);
   }
 
   if (!projectDescription) {
-    redirect(`/team/${teamId}?error=description_required`);
+    redirect(`/team/${teamId}?projectError=description_required&confirmationError=project_required`);
   }
 
   if (!isValidUrl(githubLink)) {
-    redirect(`/team/${teamId}?error=github_url`);
+    redirect(`/team/${teamId}?projectError=github_url`);
   }
 
   if (deployedLink && !isValidUrl(deployedLink)) {
-    redirect(`/team/${teamId}?error=deployed_url`);
-  }
-
-  if (confirm !== "on") {
-    redirect(`/team/${teamId}?error=confirm_required`);
+    redirect(`/team/${teamId}?projectError=deployed_url`);
   }
 
   await prisma.team.update({
@@ -241,6 +271,11 @@ async function submitTeam(formData: FormData) {
   });
 
   revalidatePath(`/team/${teamId}`);
+  redirect(buildAlertUrl(`/team/${teamId}`, {
+    variant: "success",
+    title: "Team registration completed.",
+    message: "Your confirmed team has been submitted for review.",
+  }));
 }
 
 export default async function TeamDashboardPage({ params, searchParams }: PageProps) {
@@ -285,6 +320,8 @@ export default async function TeamDashboardPage({ params, searchParams }: PagePr
   const hasGithubLink = Boolean(team.githubLink?.trim());
   const hasProjectDescription = Boolean(team.projectDescription?.trim());
   const hasPendingMembers = pendingMembers.length > 0;
+  const projectReady = hasGithubLink && hasProjectDescription;
+  const projectStatusLabel = projectReady ? "Ready" : "Draft";
   const canSubmit = approvedMemberCount >= MIN_TEAM_SIZE && approvedMemberCount <= MAX_TEAM_SIZE && hasGithubLink && hasProjectDescription && !hasPendingMembers;
 
   const confirmationChecklist = [
@@ -294,7 +331,6 @@ export default async function TeamDashboardPage({ params, searchParams }: PagePr
     { label: "All members joined", value: hasPendingMembers ? "Pending" : "Complete", complete: !hasPendingMembers },
   ];
 
-  const errorMessage = ERROR_MESSAGES[String(qp.error ?? "")] ?? "";
 
   const inviteLink = `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/register?invite=${team.code}`;
 
@@ -309,18 +345,33 @@ export default async function TeamDashboardPage({ params, searchParams }: PagePr
     displayName: user.fullName,
   };
 
+  const memberErrorCode = String(qp.memberError ?? "");
+  const projectErrorCode = String(qp.projectError ?? "");
+  const confirmationErrorCode = String(qp.confirmationError ?? "");
+  const projectSaved = String(qp.projectSaved ?? "") === "1";
+  const memberAlert = getSectionAlertCode(memberErrorCode, MEMBER_ERROR_MESSAGES);
+  const projectAlert = getSectionAlertCode(projectErrorCode, PROJECT_ERROR_MESSAGES);
+  const confirmationAlert = getSectionAlertCode(confirmationErrorCode, ERROR_MESSAGES);
+
   return (
     <ParticipantShell identity={identity}>
       <section className="space-y-6">
         <div className="card p-6">
           <h1 className="text-2xl font-bold">{team.name}</h1>
           <p className="mt-2 text-sm">Status: <span className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold ${statusClass}`}>{statusText}</span></p>
-          {errorMessage && <p className="mt-3 rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-800">{errorMessage}</p>}
-          {!isDraft && <p className="mt-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">Details locked after team confirmation.</p>}
+          {!isDraft && <SectionAlert variant="warning" title="Details locked after team confirmation." message="Team, project, and submission edits are disabled once the team is confirmed." className="mt-3" />}
         </div>
 
         <div className="card p-6">
           <h2 className="text-lg font-semibold">Members</h2>
+          {memberAlert && (
+            <SectionAlert
+              variant={memberErrorCode === "team_locked" ? "warning" : "error"}
+              title={memberErrorCode === "team_locked" ? "Details locked after team confirmation." : "Member update blocked."}
+              message={memberAlert.message}
+              className="mt-3"
+            />
+          )}
           <p className="mt-2 text-sm">Team Code: <span className="pill">{team.code}</span></p>
           <p className="mt-1 text-sm text-muted">Invite Link: <a className="text-accent" href={inviteLink}>{inviteLink}</a></p>
           <ul className="mt-3 grid gap-2">
@@ -361,6 +412,22 @@ export default async function TeamDashboardPage({ params, searchParams }: PagePr
         <section className="card p-6">
           <h2 className="text-lg font-semibold">Project Submission</h2>
           <p className="mt-2 text-sm text-muted">Used for pre-shortlisting evaluation and team collaboration review.</p>
+          <div className="mt-3 flex items-center gap-2 text-sm">
+            <span className="font-semibold">Project Submission:</span>
+            <span className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold ${projectReady ? "border-emerald-300 bg-emerald-50 text-emerald-800" : "border-amber-300 bg-amber-50 text-amber-800"}`}>
+              Status: {projectStatusLabel}
+            </span>
+          </div>
+          {projectSaved && <SectionAlert variant="success" title="Draft saved." message="Project draft saved." className="mt-3" />}
+          {projectAlert && (
+            <SectionAlert
+              variant={projectErrorCode === "team_locked" ? "warning" : "error"}
+              title={projectErrorCode === "team_locked" ? "Details locked after team confirmation." : "Project submission incomplete."}
+              message={projectAlert.message}
+              hint={projectErrorCode === "team_locked" ? "Project edits are disabled after confirmation." : "Update the project section, then try confirming again."}
+              className="mt-3"
+            />
+          )}
 
           {isLeader ? (
             isDraft ? (
@@ -398,7 +465,7 @@ export default async function TeamDashboardPage({ params, searchParams }: PagePr
                 />
               </div>
               <div className="md:col-span-2">
-                <FormSubmitButton pendingLabel="Saving..." className="rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-white">Update Project Details</FormSubmitButton>
+                <FormSubmitButton pendingLabel="Saving..." className="rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-white">Save Draft</FormSubmitButton>
               </div>
             </form>
             ) : (
@@ -468,6 +535,15 @@ export default async function TeamDashboardPage({ params, searchParams }: PagePr
             <input type="hidden" name="teamId" value={team.id} />
             <h2 className="text-lg font-semibold">Final Submission</h2>
             <p className="mt-2 text-sm text-muted">This confirms the current team package for review and locks it after submission.</p>
+            {confirmationAlert && (
+              <SectionAlert
+                variant={confirmationErrorCode === "confirm_required" || confirmationErrorCode === "project_required" ? "error" : "warning"}
+                title={confirmationErrorCode === "project_required" ? "Project submission incomplete." : "Confirmation required."}
+                message={confirmationAlert.message}
+                hint="Fix the issue in the indicated section before resubmitting."
+                className="mt-3"
+              />
+            )}
 
             <div className="mt-4 rounded-2xl border border-border bg-surface-2 p-4">
               <p className="text-sm font-semibold">Confirmation checklist</p>

@@ -9,6 +9,7 @@ import { canUseOrganizerCapability } from "@/lib/org-access";
 import { prisma } from "@/lib/prisma";
 import { buildTeamQrCodeUrl } from "@/lib/qr";
 import { makeToken } from "@/lib/security";
+import { buildAlertUrl } from "@/lib/alerts";
 import { formErrorClass, formFieldClass, formSelectClass, formTextareaClass, formSuccessClass, getFormErrorMessage, normalizeFormValue } from "@/lib/utils";
 
 type SearchProps = {
@@ -116,6 +117,16 @@ async function saveReview(formData: FormData) {
   revalidatePath("/organizer/review");
   revalidatePath("/organizer/teams");
   revalidatePath(`/team/${teamId}`);
+
+  redirect(buildAlertUrl(`/organizer/review?teamId=${teamId}`, {
+    variant: decision === TeamStatus.APPROVED ? "success" : decision === TeamStatus.REJECTED ? "warning" : "info",
+    title: decision === TeamStatus.APPROVED ? "Team approved." : decision === TeamStatus.REJECTED ? "Team rejected." : "Team review saved.",
+    message: decision === TeamStatus.APPROVED
+      ? "The team has been selected and the QR is ready for delivery."
+      : decision === TeamStatus.REJECTED
+        ? "The team has been marked as rejected after review."
+        : "The review status has been updated.",
+  }));
 }
 
 async function queueNotification(formData: FormData) {

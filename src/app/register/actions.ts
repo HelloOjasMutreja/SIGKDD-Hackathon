@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { setParticipantSession } from "@/lib/auth";
 import { UserRole } from "@/lib/domain";
 import { hashPassword } from "@/lib/security";
+import { buildAlertUrl } from "@/lib/alerts";
 import { isValidEmail, isValidPhoneNumber, isValidUrl, normalizeEmail, normalizeFormValue, normalizePhoneNumber } from "@/lib/utils";
 
 const REGISTER_REGEX = /^RA\d{13}$/;
@@ -96,7 +97,12 @@ export async function registerParticipant(formData: FormData) {
             status: TeamMemberStatus.PENDING,
           },
         });
-        redirect(`/team-setup?status=pending&teamId=${invitedTeam.id}&invite=1`);
+          redirect(buildAlertUrl(`/team-setup?status=pending&teamId=${invitedTeam.id}&invite=1`, {
+            variant: "info",
+            title: "Join request submitted.",
+            message: "Your invited team request is now pending leader approval.",
+            hint: "You can review the pending state from Team Setup.",
+          }));
       }
     }
 
@@ -152,9 +158,18 @@ export async function registerParticipant(formData: FormData) {
           status: TeamMemberStatus.PENDING,
         },
       });
-      redirect(`/team-setup?status=pending&teamId=${invitedTeam.id}&invite=1`);
+      redirect(buildAlertUrl(`/team-setup?status=pending&teamId=${invitedTeam.id}&invite=1`, {
+        variant: "info",
+        title: "Join request submitted.",
+        message: "Your invited team request is now pending leader approval.",
+        hint: "You can review the pending state from Team Setup.",
+      }));
     }
   }
 
-  redirect("/team-setup");
+  redirect(buildAlertUrl("/team-setup", {
+    variant: "success",
+    title: "Registration completed successfully.",
+    message: "Your participant profile is ready. Create or join a team next.",
+  }));
 }

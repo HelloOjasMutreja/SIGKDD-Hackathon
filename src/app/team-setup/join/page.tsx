@@ -4,6 +4,7 @@ import { ParticipantShell } from "@/components/participant-shell";
 import { TeamMemberStatus, TeamStatus } from "@/lib/domain";
 import { getParticipantTeamState, requireParticipant } from "@/lib/guards";
 import { prisma } from "@/lib/prisma";
+import { buildAlertUrl } from "@/lib/alerts";
 import { formErrorClass, formFieldClass, formSuccessClass, getFormErrorMessage, normalizeFormValue } from "@/lib/utils";
 
 const MAX_TEAM_SIZE = 4;
@@ -61,7 +62,12 @@ async function requestJoin(formData: FormData) {
     },
   });
 
-  redirect(`/team-setup/join?code=${code}&joined=1`);
+  redirect(buildAlertUrl(`/team-setup/join?code=${code}&joined=1`, {
+    variant: "info",
+    title: "Join request sent.",
+    message: "Your request has been submitted to the team leader.",
+    hint: "You will see the pending badge until it is reviewed.",
+  }));
 }
 
 type SearchProps = {

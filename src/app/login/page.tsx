@@ -4,6 +4,7 @@ import { FormSubmitButton } from "@/components/form-submit-button";
 import { prisma } from "@/lib/prisma";
 import { setParticipantSession } from "@/lib/auth";
 import { getParticipantTeamState } from "@/lib/guards";
+import { buildAlertUrl } from "@/lib/alerts";
 import { UserRole } from "@/lib/domain";
 import { hashPassword } from "@/lib/security";
 import { formErrorClass, formFieldClass, getFormErrorMessage, isValidEmail, normalizeEmail, normalizeFormValue } from "@/lib/utils";
@@ -30,10 +31,18 @@ async function participantLogin(formData: FormData) {
 
   const state = await getParticipantTeamState(user.id);
   if (state.state === "approved") {
-    redirect(`/team/${state.teamId}`);
+    redirect(buildAlertUrl(`/team/${state.teamId}`, {
+      variant: "info",
+      title: "You are now part of the team.",
+      message: "Your team dashboard is ready.",
+    }));
   }
   if (state.state === "pending") {
-    redirect(`/team-setup?status=pending&teamId=${state.teamId}`);
+    redirect(buildAlertUrl(`/team-setup?status=pending&teamId=${state.teamId}`, {
+      variant: "info",
+      title: "Join request pending.",
+      message: "Your team leader has not reviewed the request yet.",
+    }));
   }
 
   redirect("/team-setup");
