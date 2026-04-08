@@ -1,6 +1,7 @@
 import { ApprovalStatus, OrganizerApprovedRole, UserRole } from "@/lib/domain";
 import { revalidatePath } from "next/cache";
 import { OrganizerShell } from "@/components/organizer-shell";
+import { FormSubmitButton } from "@/components/form-submit-button";
 import { requireApprovedOrganizer } from "@/lib/guards";
 import { hasOrgRole } from "@/lib/org-access";
 import { prisma } from "@/lib/prisma";
@@ -125,13 +126,13 @@ export default async function OrganizerApprovalsPage() {
                       <option key={role} value={role}>{role.replaceAll("_", " ")}</option>
                     ))}
                   </select>
-                  <button className="rounded-lg bg-[#17324d] px-3 py-1.5 text-xs font-semibold text-white">Approve</button>
+                  <FormSubmitButton pendingLabel="Approving..." className="rounded-lg bg-[#17324d] px-3 py-1.5 text-xs font-semibold text-white">Approve</FormSubmitButton>
                 </form>
 
                 <form action={rejectOrganizer} className="flex flex-wrap gap-2">
                   <input type="hidden" name="profileId" value={item.id} />
                   <input name="reason" placeholder="Optional rejection reason" className={formFieldClass} />
-                  <button className="rounded-lg border border-[#cdd8e5] px-3 py-1.5 text-xs font-semibold">Reject</button>
+                  <FormSubmitButton pendingLabel="Rejecting..." className="rounded-lg border border-[#cdd8e5] px-3 py-1.5 text-xs font-semibold">Reject</FormSubmitButton>
                 </form>
               </div>
             </article>

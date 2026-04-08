@@ -2,6 +2,7 @@ import { ApprovalStatus, OrganizerApprovedRole } from "@/lib/domain";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { OrganizerShell } from "@/components/organizer-shell";
+import { FormSubmitButton } from "@/components/form-submit-button";
 import { requireApprovedOrganizer } from "@/lib/guards";
 import { canUseOrganizerCapability } from "@/lib/org-access";
 import { prisma } from "@/lib/prisma";
@@ -99,7 +100,7 @@ export default async function OrganizerRolesPage() {
                     ))}
                   </select>
                 </label>
-                <button className="rounded-xl bg-[#17324d] px-4 py-2 text-sm font-semibold text-white md:mt-6">Update Role</button>
+                <FormSubmitButton pendingLabel="Updating..." className="rounded-xl bg-[#17324d] px-4 py-2 text-sm font-semibold text-white md:mt-6">Update Role</FormSubmitButton>
               </form>
             </article>
           ))}

@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { ApprovalStatus, TeamMemberStatus } from "@/lib/domain";
+import { ApprovalStatus, TeamMemberStatus, TeamStatus } from "@/lib/domain";
 import { prisma } from "@/lib/prisma";
 import { getOrganizerSession, getParticipantSession } from "@/lib/auth";
 
@@ -103,7 +103,12 @@ export async function getParticipantTeamState(userId: string) {
   });
 
   if (approvedMembership) {
-    return { state: "approved" as const, teamId: approvedMembership.teamId, team: approvedMembership.team };
+    return {
+      state: "approved" as const,
+      teamId: approvedMembership.teamId,
+      team: approvedMembership.team,
+      teamStatus: (approvedMembership.team?.status ?? null) as TeamStatus | null,
+    };
   }
 
   const pendingMembership = await prisma.teamMember.findFirst({
@@ -112,9 +117,14 @@ export async function getParticipantTeamState(userId: string) {
   });
 
   if (pendingMembership) {
-    return { state: "pending" as const, teamId: pendingMembership.teamId, team: pendingMembership.team };
+    return {
+      state: "pending" as const,
+      teamId: pendingMembership.teamId,
+      team: pendingMembership.team,
+      teamStatus: (pendingMembership.team?.status ?? null) as TeamStatus | null,
+    };
   }
 
-  return { state: "none" as const, teamId: null, team: null };
+  return { state: "none" as const, teamId: null, team: null, teamStatus: null as TeamStatus | null };
 }
 

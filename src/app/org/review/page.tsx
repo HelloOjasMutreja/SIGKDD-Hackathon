@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { OrganizerShell } from "@/components/organizer-shell";
+import { FormSubmitButton } from "@/components/form-submit-button";
 import { TeamMemberStatus, TeamStatus } from "@/lib/domain";
 import { requireApprovedOrganizer } from "@/lib/guards";
 import { canUseOrganizerCapability } from "@/lib/org-access";
@@ -329,13 +330,13 @@ export default async function OrganizerReviewPage({ searchParams }: SearchProps)
                       <span>Reviewer Notes</span>
                       <textarea name="reviewNotes" rows={5} defaultValue={selectedTeam.reviewNotes ?? ""} placeholder="Internal notes only" className={formTextareaClass} />
                     </label>
-                    <button className="rounded-xl bg-[#17324d] px-4 py-2 text-sm font-semibold text-white">Save Review</button>
+                    <FormSubmitButton pendingLabel="Saving..." className="rounded-xl bg-[#17324d] px-4 py-2 text-sm font-semibold text-white">Save Review</FormSubmitButton>
                   </form>
 
                   <div className="mt-4 flex flex-wrap gap-3">
                     <form action={queueNotification}>
                       <input type="hidden" name="teamId" value={selectedTeam.id} />
-                      <button disabled={selectedTeam.status !== TeamStatus.APPROVED} className="rounded-xl border border-[#cdd8e5] px-4 py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50">Queue Email Notification</button>
+                      <FormSubmitButton disabled={selectedTeam.status !== TeamStatus.APPROVED} pendingLabel="Queueing..." className="rounded-xl border border-[#cdd8e5] px-4 py-2 text-sm font-semibold">Queue Email Notification</FormSubmitButton>
                     </form>
                     <span className="text-sm text-[#4f647b]">{selectedTeam.notificationQueuedAt ? `Queued at ${new Date(selectedTeam.notificationQueuedAt).toLocaleString()}` : "No notification queued yet"}</span>
                   </div>

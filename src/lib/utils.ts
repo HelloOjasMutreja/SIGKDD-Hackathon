@@ -26,8 +26,16 @@ export function normalizeEmail(value: FormDataEntryValue | null) {
   return normalizeFormValue(value).toLowerCase();
 }
 
+export function normalizePhoneNumber(value: FormDataEntryValue | null) {
+  return normalizeFormValue(value).replace(/\s+/g, "");
+}
+
 export function isValidEmail(value: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
+
+export function isValidPhoneNumber(value: string) {
+  return /^\d{10}$/.test(value);
 }
 
 export function isValidUrl(value: string) {

@@ -6,7 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { setParticipantSession } from "@/lib/auth";
 import { UserRole } from "@/lib/domain";
 import { hashPassword } from "@/lib/security";
-import { isValidEmail, isValidUrl, normalizeEmail, normalizeFormValue } from "@/lib/utils";
+import { isValidEmail, isValidPhoneNumber, isValidUrl, normalizeEmail, normalizeFormValue, normalizePhoneNumber } from "@/lib/utils";
 
 const REGISTER_REGEX = /^RA\d{13}$/;
 const ALLOWED_YEARS = [2027, 2028, 2029] as const;
@@ -17,7 +17,7 @@ export async function registerParticipant(formData: FormData) {
   const password = String(formData.get("password") ?? "");
   const confirmPassword = String(formData.get("confirmPassword") ?? "");
   const registerNumber = normalizeFormValue(formData.get("registerNumber")).toUpperCase();
-  const phone = normalizeFormValue(formData.get("phone"));
+  const phone = normalizePhoneNumber(formData.get("phone"));
   const graduationYear = Number(normalizeFormValue(formData.get("graduationYear")));
   const college = normalizeFormValue(formData.get("college"));
   const department = normalizeFormValue(formData.get("department"));
@@ -41,6 +41,7 @@ export async function registerParticipant(formData: FormData) {
   if (!confirmPassword) redirect("/register?error=missing_confirm_password");
   if (!registerNumber) redirect("/register?error=missing_register_number");
   if (!phone) redirect("/register?error=missing_phone");
+  if (!isValidPhoneNumber(phone)) redirect("/register?error=invalid_phone");
   if (!graduationYear) redirect("/register?error=missing_graduation_year");
   if (!city) redirect("/register?error=missing_city");
   if (!gender) redirect("/register?error=missing_gender");
@@ -95,7 +96,7 @@ export async function registerParticipant(formData: FormData) {
             status: TeamMemberStatus.PENDING,
           },
         });
-        redirect(`/team-setup/pending?teamId=${invitedTeam.id}&invite=1`);
+        redirect(`/team-setup?status=pending&teamId=${invitedTeam.id}&invite=1`);
       }
     }
 
@@ -151,7 +152,7 @@ export async function registerParticipant(formData: FormData) {
           status: TeamMemberStatus.PENDING,
         },
       });
-      redirect(`/team-setup/pending?teamId=${invitedTeam.id}&invite=1`);
+      redirect(`/team-setup?status=pending&teamId=${invitedTeam.id}&invite=1`);
     }
   }
 

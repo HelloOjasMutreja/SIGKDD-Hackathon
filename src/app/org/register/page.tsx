@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ApprovalStatus, OrganizerApprovedRole, OrganizerRequestedRole, UserRole } from "@/lib/domain";
 import { redirect } from "next/navigation";
+import { FormSubmitButton } from "@/components/form-submit-button";
 import { prisma } from "@/lib/prisma";
 import { setOrganizerSession } from "@/lib/auth";
 import { hashPassword } from "@/lib/security";
@@ -141,7 +142,7 @@ export default async function OrgRegisterPage({ searchParams }: SearchProps) {
               <span>Reason for Joining *</span>
               <textarea name="reasonForJoining" required placeholder="Explain why you want to join" className={formTextareaClass} rows={4} />
             </label>
-            <button className="rounded-xl bg-[#17324d] px-4 py-2 text-sm font-semibold text-white md:col-span-2">Submit organizer request</button>
+            <FormSubmitButton pendingLabel="Submitting..." className="rounded-xl bg-[#17324d] px-4 py-2 text-sm font-semibold text-white md:col-span-2">Submit organizer request</FormSubmitButton>
           </form>
           <p className="mt-4 text-sm text-[#4f647b]">Already registered? <Link href="/organizer/login" className="text-[#17324d]">Login</Link></p>
         </section>

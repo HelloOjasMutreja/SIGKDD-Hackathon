@@ -1,7 +1,9 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { TeamMemberStatus, TeamStatus } from "@/lib/domain";
+import { FormSubmitButton } from "@/components/form-submit-button";
 import { ParticipantShell } from "@/components/participant-shell";
+import { getParticipantTeamState } from "@/lib/guards";
 import { prisma } from "@/lib/prisma";
 import { requireParticipant } from "@/lib/guards";
 
@@ -53,6 +55,7 @@ const ERROR_MESSAGES: Record<string, string> = {
   team_pending_members: "Team confirmation is blocked until every member has joined the team.",
   confirm_required: "Check the confirmation box to confirm the submitted information is correct.",
   already_submitted: "This team has already been confirmed and is locked.",
+  team_locked: "Details locked after team confirmation.",
 };
 
 function isValidUrl(value: string) {
@@ -76,6 +79,10 @@ async function decideJoinRequest(formData: FormData) {
     return;
   }
 
+  if (team.status !== TeamStatus.DRAFT) {
+    redirect(`/team/${teamId}?error=team_locked`);
+  }
+
   await prisma.teamMember.update({
     where: { id: memberId },
     data: {
@@ -96,6 +103,10 @@ async function removeMember(formData: FormData) {
   const team = await prisma.team.findUnique({ where: { id: teamId } });
   if (!team || team.leaderId !== user.id) {
     return;
+  }
+
+  if (team.status !== TeamStatus.DRAFT) {
+    redirect(`/team/${teamId}?error=team_locked`);
   }
 
   const member = await prisma.teamMember.findUnique({ where: { id: memberId } });
@@ -171,6 +182,10 @@ async function submitTeam(formData: FormData) {
   }
 
   if (team.status !== TeamStatus.DRAFT) {
+    redirect(`/team/${teamId}?error=team_locked`);
+  }
+
+  if (team.status !== TeamStatus.DRAFT) {
     redirect(`/team/${teamId}?error=already_submitted`);
   }
 
@@ -232,6 +247,7 @@ export default async function TeamDashboardPage({ params, searchParams }: PagePr
   const user = await requireParticipant();
   const { teamId } = await params;
   const qp = await searchParams;
+  const teamState = await getParticipantTeamState(user.id);
 
   const teamMember = await prisma.teamMember.findFirst({
     where: { teamId, userId: user.id, status: TeamMemberStatus.APPROVED },
@@ -263,7 +279,8 @@ export default async function TeamDashboardPage({ params, searchParams }: PagePr
   const isLeader = team.leaderId === user.id;
   const statusText = STATUS_LABEL[team.status] ?? team.status;
   const statusClass = STATUS_BADGE[team.status] ?? "bg-slate-100 text-slate-800 border-slate-300";
-  const isSubmitted = team.status !== TeamStatus.DRAFT;
+  const isDraft = team.status === TeamStatus.DRAFT;
+  const isSubmitted = !isDraft;
   const approvedMemberCount = approvedMembers.length;
   const hasGithubLink = Boolean(team.githubLink?.trim());
   const hasProjectDescription = Boolean(team.projectDescription?.trim());
@@ -281,13 +298,25 @@ export default async function TeamDashboardPage({ params, searchParams }: PagePr
 
   const inviteLink = `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/register?invite=${team.code}`;
 
+  const identity = {
+    initials: user.fullName
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part: string) => part[0]?.toUpperCase() ?? "")
+      .join("") || "P",
+    roleLabel: isLeader ? "Team Leader" : teamMember ? "Team Member" : teamState.state === "pending" ? "Join Pending" : "Participant",
+    displayName: user.fullName,
+  };
+
   return (
-    <ParticipantShell>
+    <ParticipantShell identity={identity}>
       <section className="space-y-6">
         <div className="card p-6">
           <h1 className="text-2xl font-bold">{team.name}</h1>
           <p className="mt-2 text-sm">Status: <span className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold ${statusClass}`}>{statusText}</span></p>
           {errorMessage && <p className="mt-3 rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-800">{errorMessage}</p>}
+          {!isDraft && <p className="mt-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">Details locked after team confirmation.</p>}
         </div>
 
         <div className="card p-6">
@@ -309,7 +338,7 @@ export default async function TeamDashboardPage({ params, searchParams }: PagePr
             ))}
           </ul>
 
-          {isLeader && pendingMembers.length > 0 && (
+          {isDraft && isLeader && pendingMembers.length > 0 && (
             <div className="mt-4">
               <h3 className="text-sm font-semibold">Pending Requests</h3>
               <div className="mt-2 grid gap-2">
@@ -319,8 +348,8 @@ export default async function TeamDashboardPage({ params, searchParams }: PagePr
                     <form action={decideJoinRequest} className="mt-2 flex gap-2">
                       <input type="hidden" name="teamId" value={team.id} />
                       <input type="hidden" name="memberId" value={pending.id} />
-                      <button name="decision" value="approve" className="rounded-lg bg-accent px-2 py-1 text-xs text-white">Approve</button>
-                      <button name="decision" value="reject" className="rounded-lg border border-border px-2 py-1 text-xs">Reject</button>
+                      <FormSubmitButton name="decision" value="approve" pendingLabel="Approving..." className="rounded-lg bg-accent px-2 py-1 text-xs text-white">Approve</FormSubmitButton>
+                      <FormSubmitButton name="decision" value="reject" pendingLabel="Rejecting..." className="rounded-lg border border-border px-2 py-1 text-xs">Reject</FormSubmitButton>
                     </form>
                   </div>
                 ))}
@@ -334,6 +363,7 @@ export default async function TeamDashboardPage({ params, searchParams }: PagePr
           <p className="mt-2 text-sm text-muted">Used for pre-shortlisting evaluation and team collaboration review.</p>
 
           {isLeader ? (
+            isDraft ? (
             <form action={updateTeamProject} className="mt-4 grid gap-3 md:grid-cols-2">
               <input type="hidden" name="teamId" value={team.id} />
               <div className="md:col-span-2">
@@ -367,8 +397,34 @@ export default async function TeamDashboardPage({ params, searchParams }: PagePr
                   className="w-full rounded-xl border border-border bg-surface-2 px-3 py-2 text-sm"
                 />
               </div>
-              <button className="rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-white md:col-span-2">Update Project Details</button>
+              <div className="md:col-span-2">
+                <FormSubmitButton pendingLabel="Saving..." className="rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-white">Update Project Details</FormSubmitButton>
+              </div>
             </form>
+            ) : (
+            <div className="mt-4 grid gap-3 text-sm">
+              <div className="rounded-lg border border-border bg-surface-2 p-3">
+                <p className="font-semibold">Project editing locked</p>
+                <p className="mt-1 text-muted">Details locked after team confirmation.</p>
+              </div>
+              <div className="rounded-lg border border-border bg-surface-2 p-3">
+                <p className="font-semibold">GitHub Repository URL</p>
+                <p className="mt-1 break-all">
+                  {team.githubLink ? <a href={team.githubLink} className="text-accent" target="_blank" rel="noreferrer">{team.githubLink}</a> : "Not provided"}
+                </p>
+              </div>
+              <div className="rounded-lg border border-border bg-surface-2 p-3">
+                <p className="font-semibold">Project Description</p>
+                <p className="mt-1 whitespace-pre-wrap text-muted">{team.projectDescription?.trim() || "Not provided"}</p>
+              </div>
+              <div className="rounded-lg border border-border bg-surface-2 p-3">
+                <p className="font-semibold">Deployed Project Link</p>
+                <p className="mt-1 break-all">
+                  {team.demoLink ? <a href={team.demoLink} className="text-accent" target="_blank" rel="noreferrer">{team.demoLink}</a> : "Not provided"}
+                </p>
+              </div>
+            </div>
+            )
           ) : (
             <div className="mt-4 grid gap-3 text-sm">
               <div className="rounded-lg border border-border bg-surface-2 p-3">
@@ -435,7 +491,7 @@ export default async function TeamDashboardPage({ params, searchParams }: PagePr
               I confirm all team project details are ready for review.
             </label>
             <p className="mt-3 text-sm text-muted">Confirmation requires 3-4 approved members, a GitHub repository link, a project description, and every member joined.</p>
-            <button disabled={!canSubmit} className="mt-4 rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50">Confirm Team Registration</button>
+            <FormSubmitButton disabled={!canSubmit} pendingLabel="Submitting..." className="mt-4 rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-white">Confirm Team Registration</FormSubmitButton>
           </form>
         )}
 

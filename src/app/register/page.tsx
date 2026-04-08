@@ -19,6 +19,7 @@ export default async function RegisterPage({ searchParams }: SearchProps) {
     missing_confirm_password: "Please confirm your password.",
     missing_register_number: "Please enter your register number.",
     missing_phone: "Please enter your phone number.",
+    invalid_phone: "Enter a valid 10 digit phone number.",
     missing_graduation_year: "Please select your graduation year.",
     missing_city: "Please enter your city.",
     missing_gender: "Please select your gender.",

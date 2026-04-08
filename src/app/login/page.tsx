@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { FormSubmitButton } from "@/components/form-submit-button";
 import { prisma } from "@/lib/prisma";
 import { setParticipantSession } from "@/lib/auth";
 import { getParticipantTeamState } from "@/lib/guards";
@@ -29,10 +30,10 @@ async function participantLogin(formData: FormData) {
 
   const state = await getParticipantTeamState(user.id);
   if (state.state === "approved") {
-    redirect("/dashboard");
+    redirect(`/team/${state.teamId}`);
   }
   if (state.state === "pending") {
-    redirect("/team-setup/pending");
+    redirect(`/team-setup?status=pending&teamId=${state.teamId}`);
   }
 
   redirect("/team-setup");
@@ -65,7 +66,7 @@ export default async function LoginPage({ searchParams }: SearchProps) {
               <span>Password *</span>
               <input name="password" type="password" required autoComplete="current-password" placeholder="Please enter your password" className={formFieldClass} />
             </label>
-            <button className="rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-white">Login</button>
+            <FormSubmitButton pendingLabel="Logging in..." className="rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-white">Login</FormSubmitButton>
           </form>
           <p className="mt-4 text-sm text-muted">No account? <Link href="/register" className="text-accent">Register now</Link></p>
         </section>

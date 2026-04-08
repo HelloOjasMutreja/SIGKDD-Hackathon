@@ -1,4 +1,6 @@
 import { redirect } from "next/navigation";
+import { FormSubmitButton } from "@/components/form-submit-button";
+import { ParticipantShell } from "@/components/participant-shell";
 import { TeamMemberStatus } from "@/lib/domain";
 import { prisma } from "@/lib/prisma";
 import { getParticipantTeamState, requireParticipant } from "@/lib/guards";
@@ -55,17 +57,35 @@ type SearchProps = {
 };
 
 export default async function CreateTeamPage({ searchParams }: SearchProps) {
-  await requireParticipant();
+  const user = await requireParticipant();
+  const state = await getParticipantTeamState(user.id);
+  if (state.state === "approved" && state.teamId) {
+    redirect(`/team/${state.teamId}`);
+  }
+  if (state.state === "pending") {
+    redirect(`/team-setup?status=pending&teamId=${state.teamId}`);
+  }
   const params = await searchParams;
   const error = String(params.error ?? "");
+
+  const identity = {
+    initials: user.fullName
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part: string) => part[0]?.toUpperCase() ?? "")
+      .join("") || "P",
+    roleLabel: "Participant",
+    displayName: user.fullName,
+  };
 
   const errorMessage = getFormErrorMessage(error, {
     missing_name: "Please enter a team name.",
   });
 
   return (
-    <div className="min-h-screen bg-background">
-      <main className="mx-auto max-w-2xl px-6 py-10">
+    <ParticipantShell identity={identity}>
+      <section className="max-w-2xl space-y-6">
         <section className="card p-6">
           <h1 className="text-2xl font-bold">Create Team</h1>
           {error && <p className={formErrorClass}>{errorMessage}</p>}
@@ -74,10 +94,10 @@ export default async function CreateTeamPage({ searchParams }: SearchProps) {
               <span>Team Name *</span>
               <input name="teamName" required placeholder="Enter your team name" className={formFieldClass} />
             </label>
-            <button className="rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-white">Create Team</button>
+            <FormSubmitButton pendingLabel="Creating..." className="rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-white">Create Team</FormSubmitButton>
           </form>
         </section>
-      </main>
-    </div>
+      </section>
+    </ParticipantShell>
   );
 }
