@@ -15,7 +15,7 @@ export default async function RegisterPage({ searchParams }: SearchProps) {
       <main className="mx-auto max-w-3xl px-6 py-10">
         <section className="card p-6">
           <h1 className="text-2xl font-bold">Participant Registration</h1>
-          <p className="mt-1 text-sm text-muted">Complete this 4-step form to register for SIGKDD Hackathon 2025.</p>
+          <p className="mt-1 text-sm text-muted">Complete this 4-step form to register for SIGKDD Hackathon 2026.</p>
           {invite && (
             <p className="mt-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">
               Invite detected for team code {invite}. Your join request will be auto-created after registration.

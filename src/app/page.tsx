@@ -11,7 +11,7 @@ export default function ParticipantPortalHome() {
           <p className="pill inline-block">SIGKDD Student Chapter Presents</p>
           <h1 className="mt-4 max-w-3xl text-4xl font-black uppercase leading-tight tracking-tight md:text-6xl">
             SIGKDD
-            <span className="block text-accent">Hackathon 2025</span>
+            <span className="block text-accent">Hackathon 2026</span>
           </h1>
           <p className="mt-4 max-w-2xl text-base text-muted md:text-lg">
             Build with your best team, compete across tracks, and pitch your idea. Registration is now live with guided onboarding.
