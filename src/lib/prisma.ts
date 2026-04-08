@@ -9,7 +9,8 @@ type ModelName =
   | "team"
   | "teamMember"
   | "track"
-  | "checkin";
+  | "checkin"
+  | "scanEvent";
 
 type QueryArgs = Record<string, any> | undefined;
 
@@ -21,6 +22,7 @@ const TABLES: Record<ModelName, string> = {
   teamMember: "team_members",
   track: "tracks",
   checkin: "checkins",
+  scanEvent: "scan_events",
 };
 
 const FIELD_MAP: Record<ModelName, Record<string, string>> = {
@@ -54,6 +56,12 @@ const FIELD_MAP: Record<ModelName, Record<string, string>> = {
     githubLink: "github_link",
     demoLink: "demo_link",
     ideaLink: "idea_link",
+    reviewScore: "review_score",
+    reviewNotes: "review_notes",
+    reviewedBy: "reviewed_by",
+    reviewedAt: "reviewed_at",
+    notificationQueuedAt: "notification_queued_at",
+    qrGeneratedAt: "qr_generated_at",
     intakePayload: "intake_payload",
     qrToken: "qr_token",
     qrCodeUrl: "qr_code_url",
@@ -69,6 +77,14 @@ const FIELD_MAP: Record<ModelName, Record<string, string>> = {
   track: {
     isActive: "is_active",
     createdBy: "created_by",
+    createdAt: "created_at",
+  },
+  scanEvent: {
+    teamId: "team_id",
+    scannedBy: "scanned_by",
+    eventType: "event_type",
+    mealSlot: "meal_slot",
+    mealCount: "meal_count",
     createdAt: "created_at",
   },
   checkin: {
@@ -315,6 +331,14 @@ async function includeRelations(model: ModelName, row: any, include?: Record<str
     out.team = await findUnique("team", { id: row.teamId });
   }
 
+  if (model === "scanEvent" && include.team) {
+    out.team = await findUnique("team", { id: row.teamId });
+  }
+
+  if (model === "scanEvent" && include.actor) {
+    out.actor = await findUnique("user", { id: row.scannedBy });
+  }
+
   if (model === "organizerProfile" && include.user) {
     out.user = await findUnique("user", { id: row.userId });
   }
@@ -358,4 +382,5 @@ export const prisma = {
   teamMember: modelProxy("teamMember"),
   track: modelProxy("track"),
   checkin: modelProxy("checkin"),
+  scanEvent: modelProxy("scanEvent"),
 };

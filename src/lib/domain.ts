@@ -6,6 +6,8 @@ export enum UserRole {
 
 export enum OrganizerRequestedRole {
   CORE_ORGANIZER = "CORE_ORGANIZER",
+  REVIEWER = "REVIEWER",
+  CHECKIN_MANAGER = "CHECKIN_MANAGER",
   TECHNICAL_LEAD = "TECHNICAL_LEAD",
   LOGISTICS = "LOGISTICS",
   VOLUNTEER = "VOLUNTEER",
@@ -14,6 +16,8 @@ export enum OrganizerRequestedRole {
 
 export enum OrganizerApprovedRole {
   CORE_ORGANIZER = "CORE_ORGANIZER",
+  REVIEWER = "REVIEWER",
+  CHECKIN_MANAGER = "CHECKIN_MANAGER",
   TECHNICAL_LEAD = "TECHNICAL_LEAD",
   LOGISTICS = "LOGISTICS",
   VOLUNTEER = "VOLUNTEER",
@@ -35,4 +39,12 @@ export enum TeamMemberStatus {
 export enum TeamStatus {
   DRAFT = "DRAFT",
   SUBMITTED = "SUBMITTED",
+  UNDER_REVIEW = "UNDER_REVIEW",
+  APPROVED = "APPROVED",
+  REJECTED = "REJECTED",
+}
+
+export enum ScanEventType {
+  CHECKIN = "CHECKIN",
+  MEAL = "MEAL",
 }

@@ -130,10 +130,11 @@ export default async function OrgRegisterPage({ searchParams }: SearchProps) {
               <select name="requestedRole" required className={formSelectClass}>
                 <option value="">Select a role</option>
                 <option value="CORE_ORGANIZER">Core Organizer</option>
+                <option value="REVIEWER">Reviewer</option>
+                <option value="CHECKIN_MANAGER">Check-in Manager</option>
                 <option value="TECHNICAL_LEAD">Technical Lead</option>
                 <option value="LOGISTICS">Logistics</option>
                 <option value="VOLUNTEER">Volunteer</option>
-                <option value="PR_MARKETING">PR & Marketing</option>
               </select>
             </label>
             <label className="grid gap-1 text-sm font-medium text-[#17324d] md:col-span-2">

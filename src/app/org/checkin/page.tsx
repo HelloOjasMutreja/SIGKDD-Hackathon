@@ -1,8 +1,7 @@
 import { redirect } from "next/navigation";
-import { OrganizerApprovedRole, UserRole } from "@/lib/domain";
 import { OrganizerShell } from "@/components/organizer-shell";
 import { requireApprovedOrganizer } from "@/lib/guards";
-import { hasOrgRole } from "@/lib/org-access";
+import { canUseOrganizerCapability } from "@/lib/org-access";
 import { prisma } from "@/lib/prisma";
 import { formErrorClass, formFieldClass, formSuccessClass, getFormErrorMessage, normalizeFormValue } from "@/lib/utils";
 
@@ -11,7 +10,7 @@ async function markCheckin(formData: FormData) {
   const user = await requireApprovedOrganizer();
   const approvedRole = user.organizerProfile?.approvedRole ?? null;
 
-  const allowed = hasOrgRole(user.role, approvedRole, [UserRole.ADMIN, OrganizerApprovedRole.LOGISTICS, OrganizerApprovedRole.VOLUNTEER]);
+  const allowed = canUseOrganizerCapability(user.role, approvedRole, "checkins:manage");
   if (!allowed) {
     return;
   }
@@ -49,13 +48,13 @@ export default async function OrgCheckinPage({ searchParams }: SearchProps) {
   const user = await requireApprovedOrganizer();
   const approvedRole = user.organizerProfile?.approvedRole ?? null;
 
-  const allowed = hasOrgRole(user.role, approvedRole, [UserRole.ADMIN, OrganizerApprovedRole.LOGISTICS, OrganizerApprovedRole.VOLUNTEER]);
+  const allowed = canUseOrganizerCapability(user.role, approvedRole, "checkins:manage");
   if (!allowed) {
     return (
       <OrganizerShell>
         <section className="rounded-2xl border border-[#cdd8e5] bg-white p-6">
           <h1 className="text-2xl font-bold text-[#17324d]">Check-in</h1>
-          <p className="mt-2 text-sm text-[#4f647b]">Access restricted to Admin, Logistics, and Volunteer roles.</p>
+          <p className="mt-2 text-sm text-[#4f647b]">Access restricted to operational organizer roles.</p>
         </section>
       </OrganizerShell>
     );
@@ -105,7 +104,7 @@ export default async function OrgCheckinPage({ searchParams }: SearchProps) {
                 </tr>
               </thead>
               <tbody>
-                {recent.map((item) => (
+                {recent.map((item: { id: string; team: { name: string }; actor: { fullName: string }; checkedInAt: Date }) => (
                   <tr key={item.id} className="border-b border-[#eef3f8]">
                     <td className="py-2">{item.team.name}</td>
                     <td className="py-2">{item.actor.fullName}</td>

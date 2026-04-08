@@ -37,10 +37,10 @@ export function middleware(request: NextRequest) {
   const organizerSession = parseCookie<OrganizerSession>(request.cookies.get("organizer_session")?.value);
 
   const participantProtected = ["/team-setup", "/dashboard", "/profile", "/team/"];
-  const organizerProtected = ["/organizer/dashboard", "/organizer/teams", "/organizer/checkin", "/organizer/admin", "/organizer/pending"];
+  const publicOrganizerPaths = ["/organizer/login", "/organizer/register", "/organizer/pending", "/organizer/logout"];
 
   const isParticipantProtected = participantProtected.some((p) => pathname === p || pathname.startsWith(`${p}/`));
-  const isOrganizerProtected = organizerProtected.some((p) => pathname === p || pathname.startsWith(`${p}/`));
+  const isOrganizerProtected = isOrganizerPath && !publicOrganizerPaths.some((p) => pathname === p || pathname.startsWith(`${p}/`));
 
   if (isOrganizerPath && participantSession) {
     return NextResponse.redirect(new URL("/dashboard", request.url));

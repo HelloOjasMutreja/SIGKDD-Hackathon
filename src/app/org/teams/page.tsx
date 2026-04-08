@@ -2,6 +2,7 @@ import Link from "next/link";
 import { TeamStatus } from "@/lib/domain";
 import { OrganizerShell } from "@/components/organizer-shell";
 import { requireApprovedOrganizer } from "@/lib/guards";
+import { canUseOrganizerCapability } from "@/lib/org-access";
 import { prisma } from "@/lib/prisma";
 
 type SearchProps = {
@@ -9,7 +10,18 @@ type SearchProps = {
 };
 
 export default async function OrgTeamsPage({ searchParams }: SearchProps) {
-  await requireApprovedOrganizer();
+  const user = await requireApprovedOrganizer();
+  if (!canUseOrganizerCapability(user.role, user.organizerProfile?.approvedRole ?? null, "teams:view")) {
+    return (
+      <OrganizerShell>
+        <section className="rounded-2xl border border-[#cdd8e5] bg-white p-6">
+          <h1 className="text-2xl font-bold text-[#17324d]">Teams Management</h1>
+          <p className="mt-2 text-sm text-[#4f647b]">Access restricted to reviewers, core organizers, technical leads, and admins.</p>
+        </section>
+      </OrganizerShell>
+    );
+  }
+
   const params = await searchParams;
   const trackId = String(params.trackId ?? "");
   const status = String(params.status ?? "");
@@ -45,6 +57,9 @@ export default async function OrgTeamsPage({ searchParams }: SearchProps) {
               <option value="">All Status</option>
               <option value="DRAFT">DRAFT</option>
               <option value="SUBMITTED">SUBMITTED</option>
+              <option value="UNDER_REVIEW">UNDER_REVIEW</option>
+              <option value="APPROVED">APPROVED</option>
+              <option value="REJECTED">REJECTED</option>
             </select>
             <button className="rounded-xl bg-[#17324d] px-4 py-2 text-sm font-semibold text-white">Apply</button>
           </form>
@@ -72,7 +87,7 @@ export default async function OrgTeamsPage({ searchParams }: SearchProps) {
                   <td className="py-2">{team.track?.name ?? "-"}</td>
                   <td className="py-2">{team.status}</td>
                   <td className="py-2">{team.createdAt.toLocaleDateString()}</td>
-                  <td className="py-2"><Link href={`/team/${team.id}`} className="text-[#17324d] underline">View</Link></td>
+                  <td className="py-2"><Link href={`/organizer/review?teamId=${team.id}`} className="text-[#17324d] underline">Review</Link></td>
                 </tr>
               ))}
             </tbody>

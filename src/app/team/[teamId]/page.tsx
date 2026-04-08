@@ -391,6 +391,22 @@ export default async function TeamDashboardPage({ params, searchParams }: PagePr
           )}
         </section>
 
+        <section className="card p-6">
+          <h2 className="text-lg font-semibold">Team QR Access</h2>
+          {team.status === TeamStatus.APPROVED && team.qrCodeUrl ? (
+            <div className="mt-4 grid gap-4 md:grid-cols-[180px_1fr]">
+              <img src={team.qrCodeUrl} alt="Team QR code" className="w-full rounded-xl border border-border bg-white p-2" />
+              <div className="text-sm text-muted">
+                <p className="font-semibold text-foreground">QR is ready for event check-in and meal scans.</p>
+                <p className="mt-2">This code is shared with all approved team members.</p>
+                <p className="mt-2">QR token stored in the database and enabled only after selection.</p>
+              </div>
+            </div>
+          ) : (
+            <p className="mt-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">QR will be available after selection.</p>
+          )}
+        </section>
+
         {!isSubmitted && isLeader && (
           <form action={submitTeam} className="card p-6">
             <input type="hidden" name="teamId" value={team.id} />

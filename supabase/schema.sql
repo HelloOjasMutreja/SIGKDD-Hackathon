@@ -56,6 +56,12 @@ create table if not exists teams (
   idea_link text,
   intake_payload jsonb,
   status text not null default 'DRAFT',
+  review_score int,
+  review_notes text,
+  reviewed_by uuid references users(id) on delete set null,
+  reviewed_at timestamptz,
+  notification_queued_at timestamptz,
+  qr_generated_at timestamptz,
   qr_token text unique,
   qr_code_url text,
   submitted_at timestamptz,
@@ -77,4 +83,17 @@ create table if not exists checkins (
   team_id uuid not null references teams(id) on delete cascade,
   checked_in_by uuid not null references users(id) on delete restrict,
   checked_in_at timestamptz not null default now()
+);
+
+create table if not exists scan_events (
+  id uuid primary key default gen_random_uuid(),
+  team_id uuid not null references teams(id) on delete cascade,
+  scanned_by uuid not null references users(id) on delete restrict,
+  event_type text not null,
+  meal_slot text,
+  meal_count int not null default 1,
+  result text not null,
+  metadata jsonb,
+  created_at timestamptz not null default now(),
+  unique(team_id, event_type, meal_slot)
 );
