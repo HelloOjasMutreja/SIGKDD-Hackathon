@@ -289,6 +289,9 @@ export default async function TeamDashboardPage({ params, searchParams }: PagePr
   });
 
   if (!teamMember) {
+    if (teamState.state === "approved" && teamState.teamId) {
+      redirect(`/team/${teamState.teamId}`);
+    }
     redirect("/team-setup");
   }
 

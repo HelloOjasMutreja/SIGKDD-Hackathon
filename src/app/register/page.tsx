@@ -1,5 +1,8 @@
+import { redirect } from "next/navigation";
 import { ParticipantRegistrationForm } from "@/components/participant-registration-form";
 import { registerParticipant } from "@/app/register/actions";
+import { getParticipantSession } from "@/lib/auth";
+import { getParticipantTeamState } from "@/lib/guards";
 import { formErrorClass } from "@/lib/utils";
 
 type SearchProps = {
@@ -7,6 +10,15 @@ type SearchProps = {
 };
 
 export default async function RegisterPage({ searchParams }: SearchProps) {
+  const session = await getParticipantSession();
+  if (session) {
+    const state = await getParticipantTeamState(session.userId);
+    if (state.state === "approved" && state.teamId) {
+      redirect(`/team/${state.teamId}`);
+    }
+    redirect("/team-setup");
+  }
+
   const params = await searchParams;
   const error = String(params.error ?? "");
   const invite = String(params.invite ?? "").toUpperCase();

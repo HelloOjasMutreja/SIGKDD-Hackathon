@@ -13,12 +13,15 @@ create table if not exists users (
 create table if not exists participant_profiles (
   id uuid primary key default gen_random_uuid(),
   user_id uuid unique not null references users(id) on delete cascade,
-  register_number text unique not null,
+  register_number text not null,
   graduation_year int not null,
   college text not null,
   department text not null,
   intake_payload jsonb
 );
+
+alter table participant_profiles
+  drop constraint if exists participant_profiles_register_number_key;
 
 create table if not exists organizer_profiles (
   id uuid primary key default gen_random_uuid(),

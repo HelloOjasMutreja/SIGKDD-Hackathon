@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { FormSubmitButton } from "@/components/form-submit-button";
+import { getParticipantSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { setParticipantSession } from "@/lib/auth";
 import { getParticipantTeamState } from "@/lib/guards";
@@ -49,6 +50,15 @@ async function participantLogin(formData: FormData) {
 }
 
 export default async function LoginPage({ searchParams }: SearchProps) {
+  const session = await getParticipantSession();
+  if (session) {
+    const state = await getParticipantTeamState(session.userId);
+    if (state.state === "approved" && state.teamId) {
+      redirect(`/team/${state.teamId}`);
+    }
+    redirect("/team-setup");
+  }
+
   const params = await searchParams;
   const error = String(params.error ?? "");
 

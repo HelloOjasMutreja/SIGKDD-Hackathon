@@ -4,11 +4,15 @@ type OrganizerSession = {
   userId: string;
   role: "ORGANIZER" | "ADMIN";
   approvalStatus: "PENDING" | "APPROVED" | "REJECTED";
+  issuedAt?: number;
+  expiresAt?: number;
 };
 
 type ParticipantSession = {
   userId: string;
   role: "PARTICIPANT";
+  issuedAt?: number;
+  expiresAt?: number;
 };
 
 function parseCookie<T>(value?: string): T | null {
@@ -33,8 +37,12 @@ export function middleware(request: NextRequest) {
   const isOrganizerPath = pathname === "/organizer" || pathname.startsWith("/organizer/");
   const organizerInternalPath = isOrganizerPath ? `/org${pathname.slice("/organizer".length)}` : pathname;
 
-  const participantSession = parseCookie<ParticipantSession>(request.cookies.get("participant_session")?.value);
-  const organizerSession = parseCookie<OrganizerSession>(request.cookies.get("organizer_session")?.value);
+  const participantSessionRaw = parseCookie<ParticipantSession>(request.cookies.get("participant_session")?.value);
+  const organizerSessionRaw = parseCookie<OrganizerSession>(request.cookies.get("organizer_session")?.value);
+
+  const now = Math.floor(Date.now() / 1000);
+  const participantSession = participantSessionRaw && (!participantSessionRaw.expiresAt || participantSessionRaw.expiresAt > now) ? participantSessionRaw : null;
+  const organizerSession = organizerSessionRaw && (!organizerSessionRaw.expiresAt || organizerSessionRaw.expiresAt > now) ? organizerSessionRaw : null;
 
   const participantProtected = ["/team-setup", "/dashboard", "/profile", "/team/"];
   const publicOrganizerPaths = ["/organizer/login", "/organizer/register", "/organizer/pending", "/organizer/logout"];
@@ -44,6 +52,10 @@ export function middleware(request: NextRequest) {
 
   if (isOrganizerPath && participantSession) {
     return NextResponse.redirect(new URL("/dashboard", request.url));
+  }
+
+  if (participantSession && (pathname === "/register" || pathname === "/login")) {
+    return NextResponse.redirect(new URL("/team-setup", request.url));
   }
 
   if (!isOrganizerPath && organizerSession && (pathname === "/login" || pathname === "/register" || pathname.startsWith("/team-") || pathname === "/dashboard" || pathname === "/profile" || pathname.startsWith("/team/"))) {
