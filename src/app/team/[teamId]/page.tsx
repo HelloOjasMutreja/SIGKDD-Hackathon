@@ -40,6 +40,21 @@ const STATUS_LABEL: Record<string, string> = {
   APPROVED: "Approved",
 };
 
+const MIN_TEAM_SIZE = 3;
+const MAX_TEAM_SIZE = 4;
+
+const ERROR_MESSAGES: Record<string, string> = {
+  submission_requirements: "Check the confirmation box after the team size and project details are complete.",
+  project_required: "Add the GitHub repository link and project description before submitting.",
+  github_required: "Add the GitHub repository link before submitting.",
+  description_required: "Add the project description before submitting.",
+  team_too_small: "Team confirmation is blocked until at least 3 members have approved the team.",
+  team_too_large: "Team confirmation is blocked because the team cannot exceed 4 approved members.",
+  team_pending_members: "Team confirmation is blocked until every member has joined the team.",
+  confirm_required: "Check the confirmation box to confirm the submitted information is correct.",
+  already_submitted: "This team has already been confirmed and is locked.",
+};
+
 function isValidUrl(value: string) {
   try {
     const parsed = new URL(value);
@@ -142,20 +157,64 @@ async function submitTeam(formData: FormData) {
   const teamId = String(formData.get("teamId") ?? "");
   const confirm = String(formData.get("confirm") ?? "");
 
-  const team = await prisma.team.findUnique({ where: { id: teamId } });
+  const team = await prisma.team.findUnique({
+    where: { id: teamId },
+    include: {
+      members: {
+        select: { status: true },
+      },
+    },
+  });
 
   if (!team || team.leaderId !== user.id) {
     return;
   }
 
+  if (team.status !== TeamStatus.DRAFT) {
+    redirect(`/team/${teamId}?error=already_submitted`);
+  }
+
+  const approvedMemberCount = team.members.filter((member: TeamMemberWithUser) => member.status === TeamMemberStatus.APPROVED).length;
+  const hasPendingMembers = team.members.some((member: TeamMemberWithUser) => member.status === TeamMemberStatus.PENDING);
+
   const githubLink = String(team.githubLink ?? "").trim();
   const projectDescription = String(team.projectDescription ?? "").trim();
   const deployedLink = String(team.demoLink ?? "").trim();
 
-  const isValid = Boolean(githubLink) && Boolean(projectDescription) && isValidUrl(githubLink) && (!deployedLink || isValidUrl(deployedLink));
+  if (approvedMemberCount < MIN_TEAM_SIZE) {
+    redirect(`/team/${teamId}?error=team_too_small`);
+  }
 
-  if (!isValid || confirm !== "on") {
-    redirect(`/team/${teamId}?error=submission_requirements`);
+  if (approvedMemberCount > MAX_TEAM_SIZE) {
+    redirect(`/team/${teamId}?error=team_too_large`);
+  }
+
+  if (hasPendingMembers) {
+    redirect(`/team/${teamId}?error=team_pending_members`);
+  }
+
+  if (!githubLink && !projectDescription) {
+    redirect(`/team/${teamId}?error=project_required`);
+  }
+
+  if (!githubLink) {
+    redirect(`/team/${teamId}?error=github_required`);
+  }
+
+  if (!projectDescription) {
+    redirect(`/team/${teamId}?error=description_required`);
+  }
+
+  if (!isValidUrl(githubLink)) {
+    redirect(`/team/${teamId}?error=github_url`);
+  }
+
+  if (deployedLink && !isValidUrl(deployedLink)) {
+    redirect(`/team/${teamId}?error=deployed_url`);
+  }
+
+  if (confirm !== "on") {
+    redirect(`/team/${teamId}?error=confirm_required`);
   }
 
   await prisma.team.update({
@@ -205,8 +264,20 @@ export default async function TeamDashboardPage({ params, searchParams }: PagePr
   const statusText = STATUS_LABEL[team.status] ?? team.status;
   const statusClass = STATUS_BADGE[team.status] ?? "bg-slate-100 text-slate-800 border-slate-300";
   const isSubmitted = team.status !== TeamStatus.DRAFT;
+  const approvedMemberCount = approvedMembers.length;
+  const hasGithubLink = Boolean(team.githubLink?.trim());
+  const hasProjectDescription = Boolean(team.projectDescription?.trim());
+  const hasPendingMembers = pendingMembers.length > 0;
+  const canSubmit = approvedMemberCount >= MIN_TEAM_SIZE && approvedMemberCount <= MAX_TEAM_SIZE && hasGithubLink && hasProjectDescription && !hasPendingMembers;
 
-  const canSubmit = Boolean(team.githubLink?.trim()) && Boolean(team.projectDescription?.trim());
+  const confirmationChecklist = [
+    { label: "Approved members", value: `${approvedMemberCount}/${MIN_TEAM_SIZE}-${MAX_TEAM_SIZE}`, complete: approvedMemberCount >= MIN_TEAM_SIZE && approvedMemberCount <= MAX_TEAM_SIZE },
+    { label: "GitHub link", value: hasGithubLink ? "Provided" : "Missing", complete: hasGithubLink },
+    { label: "Description", value: hasProjectDescription ? "Provided" : "Missing", complete: hasProjectDescription },
+    { label: "All members joined", value: hasPendingMembers ? "Pending" : "Complete", complete: !hasPendingMembers },
+  ];
+
+  const errorMessage = ERROR_MESSAGES[String(qp.error ?? "")] ?? "";
 
   const inviteLink = `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/register?invite=${team.code}`;
 
@@ -216,14 +287,7 @@ export default async function TeamDashboardPage({ params, searchParams }: PagePr
         <div className="card p-6">
           <h1 className="text-2xl font-bold">{team.name}</h1>
           <p className="mt-2 text-sm">Status: <span className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold ${statusClass}`}>{statusText}</span></p>
-          {String(qp.error ?? "") && (
-            <p className="mt-3 rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-800">
-              {String(qp.error) === "submission_requirements" && "GitHub URL and Project Description are required before submission."}
-              {String(qp.error) === "project_required" && "GitHub URL and Project Description are required."}
-              {String(qp.error) === "github_url" && "Please enter a valid GitHub Repository URL (http/https)."}
-              {String(qp.error) === "deployed_url" && "Please enter a valid Deployed Project URL (http/https)."}
-            </p>
-          )}
+          {errorMessage && <p className="mt-3 rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-800">{errorMessage}</p>}
         </div>
 
         <div className="card p-6">
@@ -331,12 +395,31 @@ export default async function TeamDashboardPage({ params, searchParams }: PagePr
           <form action={submitTeam} className="card p-6">
             <input type="hidden" name="teamId" value={team.id} />
             <h2 className="text-lg font-semibold">Final Submission</h2>
-            <p className="mt-2 text-sm text-muted">This submits the current team project details for shortlisting review.</p>
+            <p className="mt-2 text-sm text-muted">This confirms the current team package for review and locks it after submission.</p>
+
+            <div className="mt-4 rounded-2xl border border-border bg-surface-2 p-4">
+              <p className="text-sm font-semibold">Confirmation checklist</p>
+              <div className="mt-3 grid gap-2 text-sm">
+                {confirmationChecklist.map((item) => (
+                  <div key={item.label} className="flex items-center justify-between gap-3 rounded-xl border border-border bg-background px-3 py-2">
+                    <div>
+                      <p className="font-medium">{item.label}</p>
+                      <p className="text-xs text-muted">{item.value}</p>
+                    </div>
+                    <span className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${item.complete ? "border-emerald-300 bg-emerald-50 text-emerald-800" : "border-amber-300 bg-amber-50 text-amber-800"}`}>
+                      {item.complete ? "Ready" : "Needs work"}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
             <label className="mt-3 flex items-center gap-2 text-sm">
               <input type="checkbox" name="confirm" />
               I confirm all team project details are ready for review.
             </label>
-            <button disabled={!canSubmit} className="mt-4 rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50">Submit Team Registration</button>
+            <p className="mt-3 text-sm text-muted">Confirmation requires 3-4 approved members, a GitHub repository link, a project description, and every member joined.</p>
+            <button disabled={!canSubmit} className="mt-4 rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50">Confirm Team Registration</button>
           </form>
         )}
 

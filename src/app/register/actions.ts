@@ -6,47 +6,72 @@ import { prisma } from "@/lib/prisma";
 import { setParticipantSession } from "@/lib/auth";
 import { UserRole } from "@/lib/domain";
 import { hashPassword } from "@/lib/security";
+import { isValidEmail, isValidUrl, normalizeEmail, normalizeFormValue } from "@/lib/utils";
 
 const REGISTER_REGEX = /^RA\d{13}$/;
 const ALLOWED_YEARS = [2027, 2028, 2029] as const;
 
 export async function registerParticipant(formData: FormData) {
-  const fullName = String(formData.get("fullName") ?? "").trim();
-  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  const fullName = normalizeFormValue(formData.get("fullName"));
+  const email = normalizeEmail(formData.get("email"));
   const password = String(formData.get("password") ?? "");
   const confirmPassword = String(formData.get("confirmPassword") ?? "");
-  const registerNumber = String(formData.get("registerNumber") ?? "").trim().toUpperCase();
-  const phone = String(formData.get("phone") ?? "").trim();
-  const graduationYear = Number(String(formData.get("graduationYear") ?? ""));
-  const college = String(formData.get("college") ?? "").trim();
-  const department = String(formData.get("department") ?? "").trim();
-  const inviteCode = String(formData.get("invite") ?? "").trim().toUpperCase();
+  const registerNumber = normalizeFormValue(formData.get("registerNumber")).toUpperCase();
+  const phone = normalizeFormValue(formData.get("phone"));
+  const graduationYear = Number(normalizeFormValue(formData.get("graduationYear")));
+  const college = normalizeFormValue(formData.get("college"));
+  const department = normalizeFormValue(formData.get("department"));
+  const inviteCode = normalizeFormValue(formData.get("invite")).toUpperCase();
 
-  const city = String(formData.get("city") ?? "").trim();
-  const gender = String(formData.get("gender") ?? "").trim();
-  const codingExperience = String(formData.get("codingExperience") ?? "").trim();
-  const domains = String(formData.get("domains") ?? "").trim();
-  const githubUrl = String(formData.get("githubUrl") ?? "").trim();
-  const linkedinUrl = String(formData.get("linkedinUrl") ?? "").trim();
-  const hackathonExperience = String(formData.get("hackathonExperience") ?? "").trim();
-  const tshirtSize = String(formData.get("tshirtSize") ?? "").trim();
+  const city = normalizeFormValue(formData.get("city"));
+  const gender = normalizeFormValue(formData.get("gender"));
+  const codingExperience = normalizeFormValue(formData.get("codingExperience"));
+  const domains = normalizeFormValue(formData.get("domains"));
+  const githubUrl = normalizeFormValue(formData.get("githubUrl"));
+  const linkedinUrl = normalizeFormValue(formData.get("linkedinUrl"));
+  const hackathonExperience = normalizeFormValue(formData.get("hackathonExperience"));
+  const tshirtSize = normalizeFormValue(formData.get("tshirtSize"));
   const dietaryRestrictions = String(formData.get("dietaryRestrictions") ?? "").trim();
-  const expectations = String(formData.get("expectations") ?? "").trim();
+  const expectations = normalizeFormValue(formData.get("expectations"));
 
-  if (!fullName || !email || !password || !registerNumber || !phone || !college || !department) {
-    redirect("/register?error=missing");
+  if (!fullName) redirect("/register?error=missing_full_name");
+  if (!email) redirect("/register?error=missing_email");
+  if (!isValidEmail(email)) redirect("/register?error=invalid_email");
+  if (!password) redirect("/register?error=missing_password");
+  if (!confirmPassword) redirect("/register?error=missing_confirm_password");
+  if (!registerNumber) redirect("/register?error=missing_register_number");
+  if (!phone) redirect("/register?error=missing_phone");
+  if (!graduationYear) redirect("/register?error=missing_graduation_year");
+  if (!city) redirect("/register?error=missing_city");
+  if (!gender) redirect("/register?error=missing_gender");
+  if (!college) redirect("/register?error=missing_college");
+  if (!department) redirect("/register?error=missing_department");
+  if (!codingExperience) redirect("/register?error=missing_coding_experience");
+  if (!hackathonExperience) redirect("/register?error=missing_hackathon_experience");
+  if (!domains) redirect("/register?error=missing_domains");
+  if (!githubUrl) redirect("/register?error=missing_github_url");
+  if (!linkedinUrl) redirect("/register?error=missing_linkedin_url");
+  if (!tshirtSize) redirect("/register?error=missing_tshirt_size");
+  if (!expectations) redirect("/register?error=missing_expectations");
+
+  if (!REGISTER_REGEX.test(registerNumber)) {
+    redirect("/register?error=register_number");
   }
 
   if (password !== confirmPassword) {
     redirect("/register?error=password_mismatch");
   }
 
-  if (!REGISTER_REGEX.test(registerNumber)) {
-    redirect("/register?error=register_number");
-  }
-
   if (!ALLOWED_YEARS.includes(graduationYear as (typeof ALLOWED_YEARS)[number])) {
     redirect("/register?error=graduation_year");
+  }
+
+  if (!isValidUrl(githubUrl)) {
+    redirect("/register?error=github_url");
+  }
+
+  if (!isValidUrl(linkedinUrl)) {
+    redirect("/register?error=linkedin_url");
   }
 
   const exists = await prisma.user.findUnique({ where: { email } });

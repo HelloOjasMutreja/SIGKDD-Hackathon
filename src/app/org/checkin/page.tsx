@@ -4,6 +4,7 @@ import { OrganizerShell } from "@/components/organizer-shell";
 import { requireApprovedOrganizer } from "@/lib/guards";
 import { hasOrgRole } from "@/lib/org-access";
 import { prisma } from "@/lib/prisma";
+import { formErrorClass, formFieldClass, formSuccessClass, getFormErrorMessage, normalizeFormValue } from "@/lib/utils";
 
 async function markCheckin(formData: FormData) {
   "use server";
@@ -15,7 +16,7 @@ async function markCheckin(formData: FormData) {
     return;
   }
 
-  const teamCode = String(formData.get("teamCode") ?? "").trim().toUpperCase();
+  const teamCode = normalizeFormValue(formData.get("teamCode")).toUpperCase();
   if (!teamCode) {
     redirect("/organizer/checkin?error=missing_team_code");
   }
@@ -63,6 +64,11 @@ export default async function OrgCheckinPage({ searchParams }: SearchProps) {
   const params = await searchParams;
   const error = String(params.error ?? "");
   const success = String(params.success ?? "");
+  const errorMessage = getFormErrorMessage(error, {
+    missing_team_code: "Please enter a team code.",
+    invalid_team_code: "Please enter a valid team code.",
+    already_checkedin: "This team has already been checked in.",
+  });
 
   const recent = await prisma.checkin.findMany({
     include: { team: true, actor: true },
@@ -76,10 +82,13 @@ export default async function OrgCheckinPage({ searchParams }: SearchProps) {
         <div className="rounded-2xl border border-[#cdd8e5] bg-white p-6">
           <h1 className="text-2xl font-bold text-[#17324d]">Manual Check-in</h1>
           <p className="mt-1 text-sm text-[#4f647b]">Enter the 6-character team code to mark attendance.</p>
-          {error && <p className="mt-3 rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-800">Error: {error.replaceAll("_", " ")}</p>}
-          {success && <p className="mt-3 rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">Checked in team: {success}</p>}
+          {error && <p className={formErrorClass}>{errorMessage}</p>}
+          {success && <p className={formSuccessClass}>Checked in team: {success}</p>}
           <form action={markCheckin} className="mt-4 flex gap-3">
-            <input name="teamCode" required maxLength={6} placeholder="Team code (e.g., HX92KL)" className="flex-1 rounded-xl border border-[#cdd8e5] px-3 py-2 text-sm uppercase" />
+            <label className="grid flex-1 gap-1 text-sm font-medium">
+              <span>Team Code *</span>
+              <input name="teamCode" required maxLength={6} placeholder="HX92KL" className={`${formFieldClass} uppercase`} />
+            </label>
             <button className="rounded-xl bg-[#17324d] px-4 py-2 text-sm font-semibold text-white">Mark Checked-In</button>
           </form>
         </div>

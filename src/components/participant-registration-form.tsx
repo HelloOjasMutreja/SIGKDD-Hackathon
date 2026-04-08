@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, type FormEvent } from "react";
+import { formFieldClass, formSelectClass, formTextareaClass } from "@/lib/utils";
 
 type ParticipantRegistrationFormProps = {
   invite: string;
@@ -91,14 +92,14 @@ export function ParticipantRegistrationForm({ invite, action }: ParticipantRegis
       </div>
 
       <section hidden={step !== 0} className="grid gap-3 md:grid-cols-2">
-        <input name="fullName" value={formState.fullName} onChange={(event) => updateField("fullName", event.target.value)} placeholder="Full Name" className="rounded-xl border border-border bg-surface-2 px-3 py-2 text-sm" />
-        <input name="email" type="email" value={formState.email} onChange={(event) => updateField("email", event.target.value)} placeholder="Email" className="rounded-xl border border-border bg-surface-2 px-3 py-2 text-sm" />
-        <input name="phone" value={formState.phone} onChange={(event) => updateField("phone", event.target.value)} placeholder="Phone Number" className="rounded-xl border border-border bg-surface-2 px-3 py-2 text-sm" />
-        <input name="city" value={formState.city} onChange={(event) => updateField("city", event.target.value)} placeholder="City" className="rounded-xl border border-border bg-surface-2 px-3 py-2 text-sm" />
-        <input name="password" type="password" value={formState.password} onChange={(event) => updateField("password", event.target.value)} placeholder="Password" className="rounded-xl border border-border bg-surface-2 px-3 py-2 text-sm" />
-        <input name="confirmPassword" type="password" value={formState.confirmPassword} onChange={(event) => updateField("confirmPassword", event.target.value)} placeholder="Confirm Password" className="rounded-xl border border-border bg-surface-2 px-3 py-2 text-sm" />
-        <select name="gender" value={formState.gender} onChange={(event) => updateField("gender", event.target.value)} className="rounded-xl border border-border bg-surface-2 px-3 py-2 text-sm md:col-span-2">
-          <option value="">Gender</option>
+        <input name="fullName" required value={formState.fullName} onChange={(event) => updateField("fullName", event.target.value)} placeholder="Full Name *" className={formFieldClass} />
+        <input name="email" required type="email" value={formState.email} onChange={(event) => updateField("email", event.target.value)} placeholder="Email *" className={formFieldClass} />
+        <input name="phone" required value={formState.phone} onChange={(event) => updateField("phone", event.target.value)} placeholder="Phone Number *" className={formFieldClass} />
+        <input name="city" required value={formState.city} onChange={(event) => updateField("city", event.target.value)} placeholder="City *" className={formFieldClass} />
+        <input name="password" required type="password" value={formState.password} onChange={(event) => updateField("password", event.target.value)} placeholder="Password *" className={formFieldClass} />
+        <input name="confirmPassword" required type="password" value={formState.confirmPassword} onChange={(event) => updateField("confirmPassword", event.target.value)} placeholder="Confirm Password *" className={formFieldClass} />
+        <select name="gender" required value={formState.gender} onChange={(event) => updateField("gender", event.target.value)} className={`${formSelectClass} md:col-span-2`}>
+          <option value="">Gender *</option>
           <option value="Female">Female</option>
           <option value="Male">Male</option>
           <option value="Non-binary">Non-binary</option>
@@ -107,38 +108,38 @@ export function ParticipantRegistrationForm({ invite, action }: ParticipantRegis
       </section>
 
       <section hidden={step !== 1} className="grid gap-3 md:grid-cols-2">
-        <input name="registerNumber" value={formState.registerNumber} onChange={(event) => updateField("registerNumber", event.target.value)} placeholder="Register Number (RA + 13 digits)" className="rounded-xl border border-border bg-surface-2 px-3 py-2 text-sm" />
-        <select name="graduationYear" value={formState.graduationYear} onChange={(event) => updateField("graduationYear", event.target.value)} className="rounded-xl border border-border bg-surface-2 px-3 py-2 text-sm">
-          <option value="">Graduation Year</option>
+        <input name="registerNumber" required value={formState.registerNumber} onChange={(event) => updateField("registerNumber", event.target.value)} placeholder="Register Number (RA + 13 digits) *" className={formFieldClass} />
+        <select name="graduationYear" required value={formState.graduationYear} onChange={(event) => updateField("graduationYear", event.target.value)} className={formSelectClass}>
+          <option value="">Graduation Year *</option>
           <option value="2027">2027</option>
           <option value="2028">2028</option>
           <option value="2029">2029</option>
         </select>
-        <input name="college" value={formState.college} onChange={(event) => updateField("college", event.target.value)} placeholder="College / Institution" className="rounded-xl border border-border bg-surface-2 px-3 py-2 text-sm md:col-span-2" />
-        <input name="department" value={formState.department} onChange={(event) => updateField("department", event.target.value)} placeholder="Department / Branch" className="rounded-xl border border-border bg-surface-2 px-3 py-2 text-sm md:col-span-2" />
+        <input name="college" required value={formState.college} onChange={(event) => updateField("college", event.target.value)} placeholder="College / Institution *" className={`${formFieldClass} md:col-span-2`} />
+        <input name="department" required value={formState.department} onChange={(event) => updateField("department", event.target.value)} placeholder="Department / Branch *" className={`${formFieldClass} md:col-span-2`} />
       </section>
 
       <section hidden={step !== 2} className="grid gap-3 md:grid-cols-2">
-        <select name="codingExperience" value={formState.codingExperience} onChange={(event) => updateField("codingExperience", event.target.value)} className="rounded-xl border border-border bg-surface-2 px-3 py-2 text-sm">
-          <option value="">Coding Experience</option>
+        <select name="codingExperience" required value={formState.codingExperience} onChange={(event) => updateField("codingExperience", event.target.value)} className={formSelectClass}>
+          <option value="">Coding Experience *</option>
           <option value="Beginner">Beginner</option>
           <option value="Intermediate">Intermediate</option>
           <option value="Advanced">Advanced</option>
         </select>
-        <select name="hackathonExperience" value={formState.hackathonExperience} onChange={(event) => updateField("hackathonExperience", event.target.value)} className="rounded-xl border border-border bg-surface-2 px-3 py-2 text-sm">
-          <option value="">Hackathon Experience</option>
+        <select name="hackathonExperience" required value={formState.hackathonExperience} onChange={(event) => updateField("hackathonExperience", event.target.value)} className={formSelectClass}>
+          <option value="">Hackathon Experience *</option>
           <option value="First time">First time</option>
           <option value="1-2 hackathons">1-2 hackathons</option>
           <option value="3+ hackathons">3+ hackathons</option>
         </select>
-        <input name="domains" value={formState.domains} onChange={(event) => updateField("domains", event.target.value)} placeholder="Preferred domains (AI, Web, Systems...)" className="rounded-xl border border-border bg-surface-2 px-3 py-2 text-sm md:col-span-2" />
-        <input name="githubUrl" value={formState.githubUrl} onChange={(event) => updateField("githubUrl", event.target.value)} placeholder="GitHub Profile URL" className="rounded-xl border border-border bg-surface-2 px-3 py-2 text-sm" />
-        <input name="linkedinUrl" value={formState.linkedinUrl} onChange={(event) => updateField("linkedinUrl", event.target.value)} placeholder="LinkedIn Profile URL" className="rounded-xl border border-border bg-surface-2 px-3 py-2 text-sm" />
+        <input name="domains" required value={formState.domains} onChange={(event) => updateField("domains", event.target.value)} placeholder="Preferred domains (AI, Web, Systems...) *" className={`${formFieldClass} md:col-span-2`} />
+        <input name="githubUrl" required value={formState.githubUrl} onChange={(event) => updateField("githubUrl", event.target.value)} placeholder="GitHub Profile URL *" className={formFieldClass} />
+        <input name="linkedinUrl" required value={formState.linkedinUrl} onChange={(event) => updateField("linkedinUrl", event.target.value)} placeholder="LinkedIn Profile URL *" className={formFieldClass} />
       </section>
 
       <section hidden={step !== 3} className="grid gap-3 md:grid-cols-2">
-        <select name="tshirtSize" value={formState.tshirtSize} onChange={(event) => updateField("tshirtSize", event.target.value)} className="rounded-xl border border-border bg-surface-2 px-3 py-2 text-sm">
-          <option value="">T-shirt Size</option>
+        <select name="tshirtSize" required value={formState.tshirtSize} onChange={(event) => updateField("tshirtSize", event.target.value)} className={formSelectClass}>
+          <option value="">T-shirt Size *</option>
           <option value="XS">XS</option>
           <option value="S">S</option>
           <option value="M">M</option>
@@ -146,8 +147,8 @@ export function ParticipantRegistrationForm({ invite, action }: ParticipantRegis
           <option value="XL">XL</option>
           <option value="XXL">XXL</option>
         </select>
-        <input name="dietaryRestrictions" value={formState.dietaryRestrictions} onChange={(event) => updateField("dietaryRestrictions", event.target.value)} placeholder="Dietary restrictions (optional)" className="rounded-xl border border-border bg-surface-2 px-3 py-2 text-sm" />
-        <textarea name="expectations" value={formState.expectations} onChange={(event) => updateField("expectations", event.target.value)} rows={4} placeholder="What do you want to build or learn in this hackathon?" className="rounded-xl border border-border bg-surface-2 px-3 py-2 text-sm md:col-span-2" />
+        <input name="dietaryRestrictions" value={formState.dietaryRestrictions} onChange={(event) => updateField("dietaryRestrictions", event.target.value)} placeholder="Dietary restrictions (optional)" className={formFieldClass} />
+        <textarea name="expectations" required value={formState.expectations} onChange={(event) => updateField("expectations", event.target.value)} rows={4} placeholder="What do you want to build or learn in this hackathon? *" className={`${formTextareaClass} md:col-span-2`} />
         <input type="hidden" name="invite" value={invite} />
       </section>
 

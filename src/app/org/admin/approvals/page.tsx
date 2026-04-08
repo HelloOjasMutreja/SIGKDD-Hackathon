@@ -4,6 +4,8 @@ import { OrganizerShell } from "@/components/organizer-shell";
 import { requireApprovedOrganizer } from "@/lib/guards";
 import { hasOrgRole } from "@/lib/org-access";
 import { prisma } from "@/lib/prisma";
+import { redirect } from "next/navigation";
+import { formFieldClass, formSelectClass } from "@/lib/utils";
 
 async function approveOrganizer(formData: FormData) {
   "use server";
@@ -15,6 +17,14 @@ async function approveOrganizer(formData: FormData) {
 
   const profileId = String(formData.get("profileId") ?? "");
   const role = String(formData.get("role") ?? "CORE_ORGANIZER") as OrganizerApprovedRole;
+
+  if (!profileId) {
+    redirect("/organizer/admin/approvals?error=missing_profile_id");
+  }
+
+  if (!role) {
+    redirect("/organizer/admin/approvals?error=missing_role");
+  }
 
   const target = await prisma.organizerProfile.findUnique({ where: { id: profileId } });
   if (!target) {
@@ -51,6 +61,10 @@ async function rejectOrganizer(formData: FormData) {
 
   const profileId = String(formData.get("profileId") ?? "");
   const reason = String(formData.get("reason") ?? "").trim();
+
+  if (!profileId) {
+    redirect("/organizer/admin/approvals?error=missing_profile_id");
+  }
 
   await prisma.organizerProfile.update({
     where: { id: profileId },
@@ -103,9 +117,10 @@ export default async function OrganizerApprovalsPage() {
               <p className="mt-1 text-sm text-[#4f647b]">Reason: {item.reasonForJoining}</p>
 
               <div className="mt-4 flex flex-wrap gap-3">
-                <form action={approveOrganizer} className="flex gap-2">
+                <form action={approveOrganizer} className="flex flex-wrap gap-2">
                   <input type="hidden" name="profileId" value={item.id} />
-                  <select name="role" defaultValue={item.requestedRole as unknown as OrganizerApprovedRole} className="rounded-lg border border-[#cdd8e5] px-2 py-1 text-sm">
+                  <select name="role" required defaultValue={item.requestedRole as unknown as OrganizerApprovedRole} className={formSelectClass}>
+                    <option value="">Select role</option>
                     {Object.values(OrganizerApprovedRole).map((role) => (
                       <option key={role} value={role}>{role.replaceAll("_", " ")}</option>
                     ))}
@@ -113,9 +128,9 @@ export default async function OrganizerApprovalsPage() {
                   <button className="rounded-lg bg-[#17324d] px-3 py-1.5 text-xs font-semibold text-white">Approve</button>
                 </form>
 
-                <form action={rejectOrganizer} className="flex gap-2">
+                <form action={rejectOrganizer} className="flex flex-wrap gap-2">
                   <input type="hidden" name="profileId" value={item.id} />
-                  <input name="reason" placeholder="Optional rejection reason" className="rounded-lg border border-[#cdd8e5] px-2 py-1 text-sm" />
+                  <input name="reason" placeholder="Optional rejection reason" className={formFieldClass} />
                   <button className="rounded-lg border border-[#cdd8e5] px-3 py-1.5 text-xs font-semibold">Reject</button>
                 </form>
               </div>
