@@ -50,7 +50,30 @@ export async function registerParticipant(formData: FormData) {
 
   const exists = await prisma.user.findUnique({ where: { email } });
   if (exists) {
-    redirect("/register?error=email_exists");
+    await setParticipantSession({ userId: exists.id, role: exists.role });
+
+    if (inviteCode) {
+      const invitedTeam = await prisma.team.findUnique({ where: { code: inviteCode } });
+      if (invitedTeam) {
+        await prisma.teamMember.upsert({
+          where: {
+            teamId_userId: {
+              teamId: invitedTeam.id,
+              userId: exists.id,
+            },
+          },
+          update: { status: TeamMemberStatus.PENDING },
+          create: {
+            teamId: invitedTeam.id,
+            userId: exists.id,
+            status: TeamMemberStatus.PENDING,
+          },
+        });
+        redirect(`/team-setup/pending?teamId=${invitedTeam.id}&invite=1`);
+      }
+    }
+
+    redirect("/team-setup");
   }
 
   const user = await prisma.user.create({
