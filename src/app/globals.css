@@ -11,7 +11,7 @@
   --accent: #145a52;
   --accent-foreground: #ffffff;
   --accent-2: #f47f33;
-  --muted: #5c647a;
+  --muted: #374151;
   --background: #fdf9f2;
   --foreground: #1a1f36;
   --card: #fffdf8;
@@ -22,7 +22,7 @@
   --primary-foreground: #ffffff;
   --secondary: #fff5e8;
   --secondary-foreground: #1a1f36;
-  --muted-foreground: #5c647a;
+  --muted-foreground: #4b5563;
   --destructive: #c93c3c;
   --input: #e5d1b2;
   --ring: #145a52;
@@ -107,9 +107,21 @@ body {
   border-radius: 999px;
   border: 1px solid var(--border);
   background: var(--surface-2);
-  color: var(--muted);
+  color: #6b4e2d;
   font-size: 0.78rem;
   padding: 0.15rem 0.6rem;
+}
+
+input,
+select,
+textarea {
+  color: var(--foreground);
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #7c6f61;
+  opacity: 1;
 }
 
 .dark {
